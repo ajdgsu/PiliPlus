@@ -583,9 +583,13 @@ class PlPlayerController {
       };
       await pp.setProperty(
         "af",
-        "scaletempo2=max-speed=8$audioNormalization",
+        "scaletempo2=max-speed=8",
       );
     }
+    await pp.setProperty(
+        "af",
+        "filter:a loudnorm=linear=true:i=-23.0:LRA=6.5:TP=-1.5",
+      );
     //  音量不一致
     if (Platform.isAndroid) {
       await pp.setProperty("volume-max", "100");
