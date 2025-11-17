@@ -762,13 +762,13 @@ class PlPlayerController {
 
   late final isAnim = _pgcType == 1 || _pgcType == 4;
   late final Rx<SuperResolutionType> superResolutionType =
-      (isAnim ? Pref.superResolutionType : SuperResolutionType.disable).obs;
+      (!isAnim ? Pref.superResolutionType : SuperResolutionType.disable).obs;
   Future<void> setShader([SuperResolutionType? type, NativePlayer? pp]) async {
     if (type == null) {
       type = superResolutionType.value;
     } else {
       superResolutionType.value = type;
-      if (isAnim && !tempPlayerConf) {
+      if (!isAnim && !tempPlayerConf) {
         setting.put(SettingBoxKey.superResolutionType, type.index);
       }
     }
@@ -834,7 +834,7 @@ class PlPlayerController {
       if (Utils.isDesktop) {
         pp.setVolume(this.volume.value * 100);
       }
-      if (isAnim) {
+      if (!isAnim) {
         setShader(superResolutionType.value, pp);
       }
       await pp.setProperty(
