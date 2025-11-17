@@ -36,6 +36,7 @@ import 'package:PiliPlus/utils/extension.dart';
 import 'package:PiliPlus/utils/feed_back.dart';
 import 'package:PiliPlus/utils/image_utils.dart';
 import 'package:PiliPlus/utils/page_utils.dart' show PageUtils;
+import 'package:PiliPlus/utils/path_utils.dart';
 import 'package:PiliPlus/utils/storage.dart';
 import 'package:PiliPlus/utils/storage_key.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
@@ -55,7 +56,7 @@ import 'package:hive/hive.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:path/path.dart' as path;
-import 'package:path_provider/path_provider.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:window_manager/window_manager.dart';
 
 class PlPlayerController {
@@ -98,6 +99,7 @@ class PlPlayerController {
   final RxDouble _currentVolume = RxDouble(
     Utils.isDesktop ? Pref.desktopVolume : 1.0,
   );
+  final setSystemBrightness = Pref.setSystemBrightness;
   final RxDouble _currentBrightness = (-1.0).obs;
 
   final RxBool _showControls = false.obs;
@@ -267,6 +269,7 @@ class PlPlayerController {
       windowManager.setMinimumSize(const Size(400, 700)),
       windowManager.setBounds(_lastWindowBounds),
       windowManager.setAlwaysOnTop(false),
+      windowManager.setAspectRatio(0),
       setting.putAll({
         SettingBoxKey.windowSize: [
           _lastWindowBounds.width,
@@ -302,7 +305,8 @@ class PlPlayerController {
     await windowManager.setMinimumSize(size);
     windowManager
       ..setSize(size)
-      ..setAlwaysOnTop(true);
+      ..setAlwaysOnTop(true)
+      ..setAspectRatio(width / height);
   }
 
   void toggleDesktopPip() {
@@ -603,14 +607,6 @@ class PlPlayerController {
         }
       });
     }
-
-    // _playerEventSubs = onPlayerStatusChanged.listen((PlayerStatus status) {
-    //   if (status == PlayerStatus.playing) {
-    //     WakelockPlus.enable();
-    //   } else {
-    //     WakelockPlus.disable();
-    //   }
-    // });
   }
 
   // 获取实例 传参
@@ -625,6 +621,12 @@ class PlPlayerController {
 
   bool _processing = false;
   bool get processing => _processing;
+
+  // offline
+  bool isFileSource = false;
+  String? dirPath;
+  String? typeTag;
+  int? mediaType;
 
   // 初始化资源
   Future<void> setDataSource(
@@ -652,8 +654,15 @@ class PlPlayerController {
     VideoType? videoType,
     VoidCallback? callback,
     Volume? volume,
+    String? dirPath,
+    String? typeTag,
+    int? mediaType,
   }) async {
     try {
+      this.dirPath = dirPath;
+      this.typeTag = typeTag;
+      this.mediaType = mediaType;
+      isFileSource = dataSource.type == DataSourceType.file;
       _processing = true;
       this.isLive = isLive;
       _videoType = videoType ?? VideoType.ugc;
@@ -694,7 +703,6 @@ class PlPlayerController {
         seekTo,
         volume,
       );
-      callback?.call();
       // 获取视频时长 00:00
       _duration.value = duration ?? _videoPlayerController!.state.duration;
       _position.value = _buffered.value = _sliderPosition.value =
@@ -709,6 +717,7 @@ class PlPlayerController {
       // listen the video player events
       startListeners();
       await _initializePlayer();
+      callback?.call();
     } catch (err, stackTrace) {
       dataStatus.status.value = DataStatus.error;
       if (kDebugMode) {
@@ -720,30 +729,25 @@ class PlPlayerController {
     }
   }
 
-  Directory? shadersDirectory;
-  Future<Directory?> copyShadersToExternalDirectory() async {
-    if (shadersDirectory != null) {
-      return shadersDirectory;
-    }
-    final manifestContent = await rootBundle.loadString('AssetManifest.json');
-    final Map<String, dynamic> manifestMap = json.decode(manifestContent);
-    final directory = await getApplicationSupportDirectory();
-    shadersDirectory = Directory(path.join(directory.path, 'anime_shaders'));
-
-    if (!shadersDirectory!.existsSync()) {
-      await shadersDirectory!.create(recursive: true);
+  String? shadersDirPath;
+  Future<String> get copyShadersToExternalDirectory async {
+    if (shadersDirPath != null) {
+      return shadersDirPath!;
     }
 
-    final shaderFiles = manifestMap.keys.where(
-      (String key) =>
-          key.startsWith('assets/shaders/') && key.endsWith('.glsl'),
-    );
+    final dir = Directory(path.join(appSupportDirPath, 'anime_shaders'));
+    if (!dir.existsSync()) {
+      await dir.create(recursive: true);
+    }
 
-    // int copiedFilesCount = 0;
+    final shaderFilesPath =
+        (Constants.mpvAnime4KShaders + Constants.mpvAnime4KShadersLite)
+            .map((e) => 'assets/shaders/$e')
+            .toList();
 
-    for (var filePath in shaderFiles) {
+    for (final filePath in shaderFilesPath) {
       final fileName = filePath.split('/').last;
-      final targetFile = File(path.join(shadersDirectory!.path, fileName));
+      final targetFile = File(path.join(dir.path, fileName));
       if (targetFile.existsSync()) {
         continue;
       }
@@ -752,12 +756,11 @@ class PlPlayerController {
         final data = await rootBundle.load(filePath);
         final List<int> bytes = data.buffer.asUint8List();
         await targetFile.writeAsBytes(bytes);
-        // copiedFilesCount++;
       } catch (e) {
         if (kDebugMode) debugPrint('$e');
       }
     }
-    return shadersDirectory;
+    return shadersDirPath = dir.path;
   }
 
   late final isAnim = _pgcType == 1 || _pgcType == 4;
@@ -783,8 +786,8 @@ class PlPlayerController {
           'change-list',
           'glsl-shaders',
           'set',
-          Utils.buildShadersAbsolutePath(
-            (await copyShadersToExternalDirectory())?.path ?? '',
+          PathUtils.buildShadersAbsolutePath(
+            await copyShadersToExternalDirectory,
             Constants.mpvAnime4KShadersLite,
           ),
         ]);
@@ -793,8 +796,8 @@ class PlPlayerController {
           'change-list',
           'glsl-shaders',
           'set',
-          Utils.buildShadersAbsolutePath(
-            (await copyShadersToExternalDirectory())?.path ?? '',
+          PathUtils.buildShadersAbsolutePath(
+            await copyShadersToExternalDirectory,
             Constants.mpvAnime4KShaders,
           ),
         ]);
@@ -858,29 +861,19 @@ class PlPlayerController {
     }
 
     // 音轨
-    if (dataSource.audioSource?.isNotEmpty == true) {
-      await pp.setProperty(
-        'audio-files',
-        Platform.isWindows
-            ? dataSource.audioSource!.replaceAll(';', '\\;')
-            : dataSource.audioSource!.replaceAll(':', '\\:'),
-      );
+    late final String audioUri;
+    if (isFileSource) {
+      audioUri = onlyPlayAudio.value || mediaType == 1
+          ? ''
+          : path.join(dirPath!, typeTag!, PathUtils.audioNameType2);
+    } else if (dataSource.audioSource?.isNotEmpty == true) {
+      audioUri = Platform.isWindows
+          ? dataSource.audioSource!.replaceAll(';', '\\;')
+          : dataSource.audioSource!.replaceAll(':', '\\:');
     } else {
-      await pp.setProperty('audio-files', '');
+      audioUri = '';
     }
-
-    // 字幕
-    if (dataSource.subFiles?.isNotEmpty == true) {
-      await pp.setProperty(
-        'sub-files',
-        Platform.isWindows
-            ? dataSource.subFiles!.replaceAll(';', '\\;')
-            : dataSource.subFiles!.replaceAll(':', '\\:'),
-      );
-      await pp.setProperty("subs-with-matching-audio", "no");
-      await pp.setProperty("sub-forced-only", "yes");
-      await pp.setProperty("blend-subtitles", "video");
-    }
+    await pp.setProperty('audio-files', audioUri);
 
     _videoController ??= VideoController(
       player,
@@ -925,41 +918,39 @@ class PlPlayerController {
       filters = null;
     }
 
-    if (kDebugMode) debugPrint(filters.toString());
+    // if (kDebugMode) debugPrint(filters.toString());
 
-    if (dataSource.type == DataSourceType.asset) {
-      final assetUrl = dataSource.videoSource!.startsWith("asset://")
-          ? dataSource.videoSource!
-          : "asset://${dataSource.videoSource!}";
-      await player.open(
-        Media(
-          assetUrl,
-          httpHeaders: dataSource.httpHeaders,
-          start: seekTo,
-          extras: filters,
-        ),
-        play: false,
+    late final String videoUri;
+    if (isFileSource) {
+      videoUri = path.join(
+        dirPath!,
+        typeTag!,
+        mediaType == 1
+            ? PathUtils.videoNameType1
+            : onlyPlayAudio.value
+            ? PathUtils.audioNameType2
+            : PathUtils.videoNameType2,
       );
     } else {
-      await player.open(
-        Media(
-          dataSource.videoSource!,
-          httpHeaders: dataSource.httpHeaders,
-          start: seekTo,
-          extras: filters,
-        ),
-        play: false,
-      );
+      videoUri = dataSource.videoSource!;
     }
-    // 音轨
-    // player.setAudioTrack(
-    //   AudioTrack.uri(dataSource.audioSource!),
-    // );
+    await player.open(
+      Media(
+        videoUri,
+        httpHeaders: dataSource.httpHeaders,
+        start: seekTo,
+        extras: filters,
+      ),
+      play: false,
+    );
 
     return player;
   }
 
   Future<bool> refreshPlayer() async {
+    if (isFileSource) {
+      return true;
+    }
     if (_videoPlayerController == null) {
       // SmartDialog.showToast('视频播放器为空，请重新进入本页面');
       return false;
@@ -1046,6 +1037,7 @@ class PlPlayerController {
   void startListeners() {
     subscriptions = {
       videoPlayerController!.stream.playing.listen((event) {
+        WakelockPlus.toggle(enable: event);
         if (event) {
           if (_shouldSetPip) {
             if (_isCurrVideoPage) {
@@ -1120,7 +1112,12 @@ class PlPlayerController {
           debugPrint(log.toString());
         })),
       videoPlayerController!.stream.error.listen((String event) {
-        debugPrint('MPV Exception: $event');
+        if (kDebugMode) {
+          debugPrint('MPV Exception: $event');
+        }
+        if (isFileSource && event.startsWith("Failed to open file")) {
+          return;
+        }
         if (isLive) {
           if (event.startsWith('tcp: ffurl_read returned ') ||
               event.startsWith("Failed to open https://") ||
@@ -1774,6 +1771,9 @@ class PlPlayerController {
     // dataStatus.status.close();
 
     await removeListeners();
+    if (playerStatus.playing) {
+      WakelockPlus.disable();
+    }
     _videoPlayerController?.dispose();
     _videoPlayerController = null;
     _videoController = null;

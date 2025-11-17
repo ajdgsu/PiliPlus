@@ -220,7 +220,7 @@ abstract class Pref {
 
   static String get defaultDecode => _setting.get(
     SettingBoxKey.defaultDecode,
-    defaultValue: VideoDecodeFormatType.values.last.codes.first,
+    defaultValue: VideoDecodeFormatType.AVC.codes.first,
   );
 
   static String get secondDecode => _setting.get(
@@ -238,10 +238,12 @@ abstract class Pref {
   static String get videoSync =>
       _setting.get(SettingBoxKey.videoSync, defaultValue: 'display-resample');
 
-  static String get defaultCDNService => _setting.get(
-    SettingBoxKey.CDNService,
-    defaultValue: CDNService.backupUrl.code,
-  );
+  static CDNService get defaultCDNService {
+    if (_setting.get(SettingBoxKey.CDNService) case final String cdnName) {
+      return CDNService.values.byName(cdnName);
+    }
+    return CDNService.backupUrl;
+  }
 
   static String get banWordForRecommend =>
       _setting.get(SettingBoxKey.banWordForRecommend, defaultValue: '');
@@ -569,7 +571,7 @@ abstract class Pref {
       _setting.get(SettingBoxKey.enableLog, defaultValue: true);
 
   static bool get disableAudioCDN =>
-      _setting.get(SettingBoxKey.disableAudioCDN, defaultValue: true);
+      _setting.get(SettingBoxKey.disableAudioCDN, defaultValue: false);
 
   static int get minDurationForRcmd =>
       _setting.get(SettingBoxKey.minDurationForRcmd, defaultValue: 0);
@@ -865,4 +867,11 @@ abstract class Pref {
 
   static bool get showTrayIcon =>
       _setting.get(SettingBoxKey.showTrayIcon, defaultValue: true);
+
+  static bool get setSystemBrightness =>
+      _setting.get(SettingBoxKey.setSystemBrightness, defaultValue: false);
+
+  static String? get downloadPath => _setting.get(SettingBoxKey.downloadPath);
+
+  static String? get liveCdnUrl => _setting.get(SettingBoxKey.liveCdnUrl);
 }

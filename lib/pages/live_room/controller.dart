@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:PiliPlus/common/widgets/text_field/controller.dart';
+import 'package:PiliPlus/common/widgets/flutter/text_field/controller.dart';
 import 'package:PiliPlus/http/constants.dart';
 import 'package:PiliPlus/http/live.dart';
 import 'package:PiliPlus/http/video.dart';
@@ -164,7 +164,7 @@ class LiveRoomController extends GetxController {
       }).toList();
       currentQnDesc.value =
           LiveQuality.fromCode(currentQn)?.desc ?? currentQn.toString();
-      videoUrl = VideoUtils.getCdnUrl(item);
+      videoUrl = VideoUtils.getLiveCdnUrl(item);
       await playerInit();
       isLoaded.value = true;
     } else {

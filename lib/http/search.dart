@@ -14,6 +14,7 @@ import 'package:PiliPlus/utils/extension.dart';
 import 'package:PiliPlus/utils/request_utils.dart';
 import 'package:PiliPlus/utils/wbi_sign.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 
@@ -83,7 +84,7 @@ class SearchHttp {
           if (gaiaVtoken != null) 'cookie': 'x-bili-gaia-vtoken=$gaiaVtoken',
           'origin': 'https://search.bilibili.com',
           'referer':
-              'https://search.bilibili.com/${searchType.name}?keyword=${Uri.encodeQueryComponent(keyword)}',
+              'https://search.bilibili.com/${searchType.name}?keyword=${Uri.encodeFull(keyword)}',
         },
       ),
     );
@@ -118,9 +119,11 @@ class SearchHttp {
             //   break;
           }
           return Success(data);
-        } catch (err) {
-          debugPrint(err.toString());
-          return Error(err.toString());
+        } catch (e, s) {
+          if (kDebugMode) {
+            rethrow;
+          }
+          return Error('$e\n\n$s');
         }
       } else {
         return Error(resData['message'], code: resData['code']);
@@ -164,9 +167,11 @@ class SearchHttp {
     if (res.data['code'] == 0) {
       try {
         return Success(SearchAllData.fromJson(res.data['data']));
-      } catch (err) {
-        debugPrint(err.toString());
-        return Error(err.toString());
+      } catch (e, s) {
+        if (kDebugMode) {
+          rethrow;
+        }
+        return Error('$e\n\n$s');
       }
     } else {
       return Error(res.data['message'] ?? '没有相关数据');

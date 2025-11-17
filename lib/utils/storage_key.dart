@@ -142,7 +142,9 @@ abstract class SettingBoxKey {
       silentDownImg = 'silentDownImg',
       showMemberShop = 'showMemberShop',
       enablePlayAll = 'enablePlayAll',
-      enableTapDm = 'enableTapDm';
+      enableTapDm = 'enableTapDm',
+      setSystemBrightness = 'setSystemBrightness',
+      downloadPath = 'downloadPath';
 
   static const String minimizeOnExit = 'minimizeOnExit',
       windowSize = 'windowSize',
@@ -222,7 +224,8 @@ abstract class SettingBoxKey {
       enableGradientBg = 'enableGradientBg',
       navBarSort = 'navBarSort',
       tempPlayerConf = 'tempPlayerConf',
-      reduceLuxColor = 'reduceLuxColor';
+      reduceLuxColor = 'reduceLuxColor',
+      liveCdnUrl = 'liveCdnUrl';
 }
 
 abstract class LocalCacheKey {
