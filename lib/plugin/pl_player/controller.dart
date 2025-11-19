@@ -407,7 +407,6 @@ class PlPlayerController {
       .where((item) => item.second != SkipType.disable)
       .map((item) => item.first.name)
       .toSet();
-  late final blockServer = Pref.blockServer;
 
   // settings
   late final showFSActionItem = Pref.showFSActionItem;
@@ -830,6 +829,7 @@ class PlPlayerController {
             bufferSize: Pref.expandBuffer
                 ? (isLive ? 64 * 1024 * 1024 : 32 * 1024 * 1024)
                 : (isLive ? 16 * 1024 * 1024 : 4 * 1024 * 1024),
+            logLevel: kDebugMode ? MPVLogLevel.warn : MPVLogLevel.error,
           ),
         );
     final pp = player.platform!;
@@ -840,10 +840,7 @@ class PlPlayerController {
       if (!isAnim) {
         setShader(superResolutionType.value, pp);
       }
-      await pp.setProperty(
-        "af",
-        "scaletempo2=max-speed=8",
-      );
+      await pp.setProperty("af", "scaletempo2=max-speed=8");
       if (Platform.isAndroid) {
         await pp.setProperty("volume-max", "100");
         String ao = Pref.useOpenSLES
@@ -858,6 +855,16 @@ class PlPlayerController {
       // await pp.setProperty("gpu-context", "android");
       // await pp.setProperty("gpu-api", "opengl");
       await player.setAudioTrack(AudioTrack.auto());
+      if (Pref.enableSystemProxy) {
+        final systemProxyHost = Pref.systemProxyHost;
+        final systemProxyPort = int.tryParse(Pref.systemProxyPort);
+        if (systemProxyPort != null && systemProxyHost.isNotEmpty) {
+          await pp.setProperty(
+            "http-proxy",
+            'http://$systemProxyHost:$systemProxyPort',
+          );
+        }
+      }
     }
 
     // 音轨
@@ -888,8 +895,7 @@ class PlPlayerController {
 
     final Map<String, String>? filters;
     if (Platform.isAndroid) {
-      String audioNormalization = '';
-      audioNormalization = AudioNormalization.getParamFromConfig(
+      String audioNormalization = AudioNormalization.getParamFromConfig(
         Pref.audioNormalization,
       );
       if (volume != null && volume.isNotEmpty) {
@@ -1109,12 +1115,13 @@ class PlPlayerController {
       }),
       if (kDebugMode)
         videoPlayerController!.stream.log.listen(((PlayerLog log) {
-          debugPrint(log.toString());
+          if (log.level == 'error' || log.level == 'fatal') {
+            Utils.reportError(log.text, null, log.prefix);
+          } else {
+            debugPrint(log.toString());
+          }
         })),
       videoPlayerController!.stream.error.listen((String event) {
-        if (kDebugMode) {
-          debugPrint('MPV Exception: $event');
-        }
         if (isFileSource && event.startsWith("Failed to open file")) {
           return;
         }
