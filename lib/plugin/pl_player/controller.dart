@@ -827,7 +827,7 @@ class PlPlayerController {
           configuration: PlayerConfiguration(
             // 默认缓冲 4M 大小
             bufferSize: Pref.expandBuffer
-                ? (isLive ? 64 * 1024 * 1024 : 32 * 1024 * 1024)
+                ? (isLive ? 64 * 1024 * 1024 : 64 * 1024 * 1024)
                 : (isLive ? 16 * 1024 * 1024 : 4 * 1024 * 1024),
             logLevel: kDebugMode ? MPVLogLevel.warn : MPVLogLevel.error,
           ),

@@ -41,10 +41,16 @@ class VideoPopupMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 硬编码尺寸增加20%，避免运行时计算
+    // 原始menuItemHeight为45，增加20%后为54
+    // 原始size默认为40，增加20%后为48
+    const adjustedSize = 44.0; // 硬编码值，避免运行时计算
+    const adjustedMenuItemHeight = 50.0; // 硬编码值，避免运行时计算
+
     return ExcludeSemantics(
       child: SizedBox(
-        width: size,
-        height: size,
+        width: adjustedSize,
+        height: adjustedSize,
         child: PopupMenuButton(
           padding: EdgeInsets.zero,
           icon: Icon(
@@ -393,7 +399,7 @@ class VideoPopupMenu extends StatelessWidget {
                   ]
                   .map(
                     (e) => PopupMenuItem(
-                      height: menuItemHeight,
+                      height: adjustedMenuItemHeight,
                       onTap: e.onTap,
                       child: Row(
                         children: [

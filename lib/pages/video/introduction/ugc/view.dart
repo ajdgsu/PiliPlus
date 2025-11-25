@@ -586,14 +586,16 @@ class _UgcIntroPanelState extends State<UgcIntroPanel> {
               text: '再看',
             ),
           ),
-          ActionItem(
-            icon: const Icon(FontAwesomeIcons.shareFromSquare),
-            onTap: () => introController.actionShareVideo(context),
-            selectStatus: false,
-            semanticsLabel: '分享',
-            text: !isLoading
-                ? NumUtils.numFormat(videoDetail.stat!.share!)
-                : null,
+          Obx(
+            () => ActionItem(
+              // 无痕模式
+              icon: const Icon(MdiIcons.incognito),
+              selectIcon: const Icon(MdiIcons.incognitoOff),
+              onTap: () => MineController.anonymity.toggle(),
+              selectStatus: MineController.anonymity.value,
+              semanticsLabel: '无痕模式',
+              text: '无痕模式',
+            ),
           ),
         ],
       ),
