@@ -399,7 +399,8 @@ class PlPlayerController {
   late final pgcSkipType = Pref.pgcSkipType;
   late final enablePgcSkip = Pref.pgcSkipType != SkipType.disable;
   // sponsor block
-  late final bool enableSponsorBlock = Pref.enableSponsorBlock || enablePgcSkip;
+  late final bool enableSponsorBlock = Pref.enableSponsorBlock;
+  late final bool enableBlock = enableSponsorBlock || enablePgcSkip;
   late final double blockLimit = Pref.blockLimit;
   late final blockSettings = Pref.blockSettings;
   late final List<Color> blockColor = Pref.blockColor;
@@ -1453,10 +1454,6 @@ class PlPlayerController {
     if (visible) {
       hideTaskControls();
     }
-  }
-
-  void hiddenControls(bool val) {
-    showControls.value = val;
   }
 
   Timer? longPressTimer;
