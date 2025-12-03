@@ -122,7 +122,7 @@ class VideoDetailController extends GetxController
   final childKey = GlobalKey<ScaffoldState>();
 
   final plPlayerController = PlPlayerController.getInstance()
-    ..setCurrBrightness(-1.0);
+    ..brightness.value = -1;
   bool get setSystemBrightness => plPlayerController.setSystemBrightness;
 
   late VideoItem firstVideo;
@@ -1879,16 +1879,17 @@ class VideoDetailController extends GetxController
         }
       }
     }
-    if (episodes?.isNotEmpty == true) {
+    if (episodes != null && episodes.isNotEmpty) {
       final downloadService = Get.find<DownloadService>();
       await downloadService.waitForInitialization;
       if (!context.mounted) {
         return;
       }
-      final Set<int?> cidSet = downloadService.downloadList
+      final Set<int> cidSet = downloadService.downloadList
+          .followedBy(downloadService.waitDownloadQueue)
           .map((e) => e.cid)
           .toSet();
-      final index = episodes!.indexWhere(
+      final index = episodes.indexWhere(
         (e) => e.cid == (seasonCid ?? cid.value),
       );
       final size = context.mediaQuerySize;

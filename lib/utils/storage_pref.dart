@@ -404,9 +404,6 @@ abstract class Pref {
   static bool get showVipDanmaku =>
       _setting.get(SettingBoxKey.showVipDanmaku, defaultValue: true);
 
-  static bool get showSpecialDanmaku =>
-      _setting.get(SettingBoxKey.showSpecialDanmaku, defaultValue: false);
-
   static bool get mergeDanmaku =>
       _setting.get(SettingBoxKey.mergeDanmaku, defaultValue: false);
 
@@ -656,7 +653,7 @@ abstract class Pref {
       _setting.get(SettingBoxKey.customColor, defaultValue: 0);
 
   static bool get dynamicColor =>
-      _setting.get(SettingBoxKey.dynamicColor, defaultValue: true);
+      _setting.get(SettingBoxKey.dynamicColor, defaultValue: !Platform.isIOS);
 
   static bool get autoClearCache =>
       _setting.get(SettingBoxKey.autoClearCache, defaultValue: false);
