@@ -73,11 +73,9 @@ class Constants {
   //   'Anime4K_Upscale_CNN_x2_S.glsl',
   // ];
   static const List<String> mpvAnime4KShaders = [
-    'Anime4K_AutoDownscalePre_x2.glsl',
     'FSRCNNX_x2_16-0-4-1.glsl',
   ];
   static const mpvAnime4KShadersLite = [
-    'Anime4K_AutoDownscalePre_x2.glsl',
     'ravu-r4-yuv.glsl',
   ];
 
