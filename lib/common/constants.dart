@@ -63,6 +63,7 @@ class Constants {
   // 超分辨率滤镜 (轻量)
   static const mpvAnime4KShadersLite = [
     'FSRCNNX_x2_16-0-4-1.glsl',
+    'Anime4K_AutoDownscalePre_x2.glsl',
   ];
   //static const List<String> mpvAnime4KShaders = [
   // 'FSRCNNX_x2_16-0-4-1.glsl',
