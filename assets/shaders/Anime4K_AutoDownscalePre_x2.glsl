@@ -23,14 +23,14 @@
 
 // For more information, please refer to <https://unlicense.org>
 
-//!DESC Anime4K-v4.0-AutoDownscalePre-x2
+//!DESC 当视频大于屏幕时，先减半以提升性能
 //!HOOK MAIN
 //!BIND HOOKED
 //!BIND NATIVE
-//!WHEN OUTPUT.w NATIVE.w / 2.0 < OUTPUT.h NATIVE.h / 2.0 < * OUTPUT.w NATIVE.w / 1.2 > OUTPUT.h NATIVE.h / 1.2 > * *
-//!WIDTH OUTPUT.w
-//!HEIGHT OUTPUT.h
+//!WHEN NATIVE.w OUTPUT.w >= NATIVE.h OUTPUT.h >= + +
+//!WIDTH NATIVE.w / 2.0
+//!HEIGHT NATIVE.h / 2.0
 
 vec4 hook() {
-	return HOOKED_tex(HOOKED_pos);
+    return HOOKED_tex(HOOKED_pos);
 }
