@@ -57,7 +57,7 @@ class Constants {
     'Anime4K_AutoDownscalePre_x2.glsl',
     'Anime4K_Clamp_Highlights.glsl',
     'Anime4K_Restore_CNN_M.glsl',
-    'Anime4K_Upscale_CNN_x2_M.glsl',
+    'FSRCNNX_x2_16-0-4-1.glsl',
   ];
 
   // 超分辨率滤镜 (轻量)
