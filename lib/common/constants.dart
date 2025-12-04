@@ -62,6 +62,7 @@ class Constants {
 
   // 超分辨率滤镜 (轻量)
   static const mpvAnime4KShadersLite = [
+    'Anime4K_AutoDownscalePre_x2.glsl',
     'Anime4K_Clamp_Highlights.glsl',
     'Anime4K_Restore_CNN_S.glsl',
     'amd-cas.glsl',
