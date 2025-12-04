@@ -56,7 +56,7 @@ class Constants {
   static const List<String> mpvAnime4KShaders = [
     'Anime4K_AutoDownscalePre_x2.glsl',
     'Anime4K_Clamp_Highlights.glsl',
-    'Anime4K_Restore_CNN_S.glsl',    
+    'Anime4K_Restore_CNN_M.glsl',    
     'Anime4K_Upscale_GAN_x2_S.glsl',
   ];
 
@@ -64,8 +64,8 @@ class Constants {
   static const mpvAnime4KShadersLite = [
     'Anime4K_AutoDownscalePre_x2.glsl',
     'Anime4K_Clamp_Highlights.glsl',
-    'Anime4K_Restore_CNN_S.glsl',    
-    'Anime4K_3DGraphics_Upscale_x2_US.glsl',
+    'Anime4K_Restore_CNN_M.glsl',    
+    'amd-cas-lite.glsl',
   ];
   //static const List<String> mpvAnime4KShaders = [
   // 'FSRCNNX_x2_16-0-4-1.glsl',
