@@ -56,16 +56,14 @@ class Constants {
   static const List<String> mpvAnime4KShaders = [
     'Anime4K_AutoDownscalePre_x2.glsl',
     'Anime4K_Clamp_Highlights.glsl',
-    'Anime4K_Restore_CNN_M.glsl',    
+    'Anime4K_Restore_CNN_S.glsl',
     'Anime4K_Upscale_GAN_x2_S.glsl',
   ];
 
   // 超分辨率滤镜 (轻量)
   static const mpvAnime4KShadersLite = [
-    'Anime4K_AutoDownscalePre_x2.glsl',
     'Anime4K_Clamp_Highlights.glsl',
-    'Anime4K_Restore_CNN_M.glsl',    
-    'amd-cas-lite.glsl',
+    'Anime4K_Restore_CNN_M.glsl',
   ];
   //static const List<String> mpvAnime4KShaders = [
   // 'FSRCNNX_x2_16-0-4-1.glsl',
