@@ -62,7 +62,7 @@ class Constants {
 
   // 超分辨率滤镜 (轻量)
   static const mpvAnime4KShadersLite = [
-    'amd-cas-lite.glsl',
+    'amd-cas.glsl',
   ];
   //static const List<String> mpvAnime4KShaders = [
   // 'FSRCNNX_x2_16-0-4-1.glsl',
