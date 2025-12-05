@@ -808,6 +808,8 @@ class PlPlayerController {
         setShader(superResolutionType.value, pp);
       }
       await pp.setProperty("af", "scaletempo2=max-speed=8");
+      // 添加vf滤镜参数
+      await pp.setProperty("vf", "lavfi=unsharp=luma_msize_x=7:luma_msize_y=7:luma_amount=1.0");
       if (Platform.isAndroid) {
         await pp.setProperty("volume-max", "100");
         String ao = Pref.useOpenSLES
