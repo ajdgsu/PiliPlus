@@ -17,7 +17,7 @@ import 'package:PiliPlus/models/common/video/video_type.dart';
 import 'package:PiliPlus/models/user/danmaku_rule.dart';
 import 'package:PiliPlus/models/video/play/url.dart';
 import 'package:PiliPlus/models_new/video/video_shot/data.dart';
-import 'package:PiliPlus/pages/danmaku/dnamaku_model.dart';
+import 'package:PiliPlus/pages/danmaku/danmaku_model.dart';
 import 'package:PiliPlus/pages/mine/controller.dart';
 import 'package:PiliPlus/plugin/pl_player/models/bottom_progress_behavior.dart';
 import 'package:PiliPlus/plugin/pl_player/models/data_source.dart';
@@ -357,7 +357,7 @@ class PlPlayerController {
   late double danmakuLineHeight = Pref.danmakuLineHeight;
   late int subtitlePaddingH = Pref.subtitlePaddingH;
   late int subtitlePaddingB = Pref.subtitlePaddingB;
-  late double subtitleBgOpaticy = Pref.subtitleBgOpaticy;
+  late double subtitleBgOpacity = Pref.subtitleBgOpacity;
   final bool showVipDanmaku = Pref.showVipDanmaku; // loop unswitching
   late double subtitleStrokeWidth = Pref.subtitleStrokeWidth;
   late int subtitleFontWeight = Pref.subtitleFontWeight;
@@ -437,9 +437,9 @@ class PlPlayerController {
     wordSpacing: 0.1,
     color: Colors.white,
     fontWeight: FontWeight.values[subtitleFontWeight],
-    backgroundColor: subtitleBgOpaticy == 0
+    backgroundColor: subtitleBgOpacity == 0
         ? null
-        : Colors.black.withValues(alpha: subtitleBgOpaticy),
+        : Colors.black.withValues(alpha: subtitleBgOpacity),
   );
 
   late final Rx<SubtitleViewConfiguration> subtitleConfig = _getSubConfig.obs;
@@ -448,7 +448,7 @@ class PlPlayerController {
     final subTitleStyle = this.subTitleStyle;
     return SubtitleViewConfiguration(
       style: subTitleStyle,
-      strokeStyle: subtitleBgOpaticy == 0
+      strokeStyle: subtitleBgOpacity == 0
           ? subTitleStyle.copyWith(
               color: null,
               background: null,
@@ -1085,7 +1085,7 @@ class PlPlayerController {
       if (kDebugMode)
         videoPlayerController!.stream.log.listen(((PlayerLog log) {
           if (log.level == 'error' || log.level == 'fatal') {
-            Utils.reportError(log.text, null, log.prefix);
+            Utils.reportError('${log.prefix}: ${log.text}', null);
           } else {
             debugPrint(log.toString());
           }
@@ -1698,7 +1698,7 @@ class PlPlayerController {
       SettingBoxKey.subtitleFontScaleFS: subtitleFontScaleFS,
       SettingBoxKey.subtitlePaddingH: subtitlePaddingH,
       SettingBoxKey.subtitlePaddingB: subtitlePaddingB,
-      SettingBoxKey.subtitleBgOpaticy: subtitleBgOpaticy,
+      SettingBoxKey.subtitleBgOpacity: subtitleBgOpacity,
       SettingBoxKey.subtitleStrokeWidth: subtitleStrokeWidth,
       SettingBoxKey.subtitleFontWeight: subtitleFontWeight,
     });
