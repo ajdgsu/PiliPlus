@@ -808,7 +808,7 @@ class PlPlayerController {
         setShader(superResolutionType.value, pp);
       }
       await pp.setProperty("af", "scaletempo2=max-speed=8");
-      await pp.setProperty("sharpen", "0.5");
+      await pp.setProperty("sharpen", "0.4");
       if (Platform.isAndroid) {
         await pp.setProperty("volume-max", "100");
         String ao = Pref.useOpenSLES
