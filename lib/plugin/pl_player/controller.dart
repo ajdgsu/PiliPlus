@@ -808,7 +808,7 @@ class PlPlayerController {
         setShader(superResolutionType.value, pp);
       }
       await pp.setProperty("af", "scaletempo2=max-speed=8");
-      await pp.setProperty("sharpen", "2.0");
+      await pp.setProperty("sharpen", "0.3");
       if (Platform.isAndroid) {
         await pp.setProperty("volume-max", "100");
         String ao = Pref.useOpenSLES
@@ -821,7 +821,7 @@ class PlPlayerController {
       // vo=gpu-next & gpu-context=android & gpu-api=opengl
       // await pp.setProperty("vo", "gpu-next");
       // await pp.setProperty("gpu-context", "android");
-      // await pp.setProperty("gpu-api", "opengl");
+      await pp.setProperty("gpu-api", "vulkan");
       await player.setAudioTrack(AudioTrack.auto());
       if (Pref.enableSystemProxy) {
         final systemProxyHost = Pref.systemProxyHost;
