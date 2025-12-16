@@ -22,8 +22,9 @@ import 'package:PiliPlus/tcp/live.dart';
 import 'package:PiliPlus/utils/accounts.dart';
 import 'package:PiliPlus/utils/danmaku_utils.dart';
 import 'package:PiliPlus/utils/duration_utils.dart';
-import 'package:PiliPlus/utils/extension.dart';
+import 'package:PiliPlus/utils/extension/iterable_ext.dart';
 import 'package:PiliPlus/utils/num_utils.dart';
+import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:PiliPlus/utils/utils.dart';
 import 'package:PiliPlus/utils/video_utils.dart';
@@ -99,7 +100,7 @@ class LiveRoomController extends GetxController {
   late final RxInt pageIndex = 0.obs;
   PageController? pageController;
 
-  int? currentQn = Utils.isMobile ? null : Pref.liveQuality;
+  int? currentQn = PlatformUtils.isMobile ? null : Pref.liveQuality;
   RxString currentQnDesc = ''.obs;
   final RxBool isPortrait = false.obs;
   late List<({int code, String desc})> acceptQnList = [];
@@ -230,16 +231,14 @@ class LiveRoomController extends GetxController {
 
   Future<void> queryLiveInfoH5() async {
     var res = await LiveHttp.liveRoomInfoH5(roomId: roomId);
-    if (res['status']) {
-      RoomInfoH5Data data = res['data'];
+    if (res.isSuccess) {
+      final data = res.data;
       roomInfoH5.value = data;
       title.value = data.roomInfo?.title ?? '';
       watchedShow.value = data.watchedShow?.textLarge;
       videoPlayerServiceHandler?.onVideoDetailChange(data, roomId, heroTag);
     } else {
-      if (res['msg'] != null) {
-        _showDialog(res['msg']);
-      }
+      res.toast();
     }
   }
 
@@ -328,9 +327,8 @@ class LiveRoomController extends GetxController {
       return;
     }
     LiveHttp.liveRoomGetDanmakuToken(roomId: roomId).then((res) {
-      if (res['status']) {
-        dmInfo = res['data'];
-        initDm(dmInfo!);
+      if (res.isSuccess) {
+        initDm(dmInfo = res.data);
       }
     });
   }
@@ -508,10 +506,10 @@ class LiveRoomController extends GetxController {
       uid: mid,
       anchorId: roomInfoH5.value?.roomInfo?.uid,
     );
-    if (res['status']) {
+    if (res.isSuccess) {
       SmartDialog.showToast('点赞成功');
     } else {
-      SmartDialog.showToast(res['msg']);
+      res.toast();
     }
     likeClickTime.value = 0;
   }

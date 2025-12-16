@@ -6,11 +6,12 @@ import 'package:PiliPlus/http/search.dart';
 import 'package:PiliPlus/models/search/suggest.dart';
 import 'package:PiliPlus/models_new/search/search_rcmd/data.dart';
 import 'package:PiliPlus/models_new/search/search_trending/data.dart';
-import 'package:PiliPlus/utils/extension.dart';
+import 'package:PiliPlus/utils/extension/get_ext.dart';
+import 'package:PiliPlus/utils/extension/string_ext.dart';
 import 'package:PiliPlus/utils/id_utils.dart';
+import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:PiliPlus/utils/storage.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
-import 'package:PiliPlus/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart';
@@ -190,7 +191,7 @@ class SSearchController extends GetxController
       },
     );
     searchFocusNode.requestFocus();
-    if (Utils.isDesktop) {
+    if (PlatformUtils.isDesktop) {
       SchedulerBinding.instance.addPostFrameCallback((_) {
         controller.selection = TextSelection.collapsed(
           offset: controller.text.length,
@@ -214,10 +215,9 @@ class SSearchController extends GetxController
   @override
   Future<void> onValueChanged(String value) async {
     var res = await SearchHttp.searchSuggest(term: value);
-    if (res['status']) {
-      SearchSuggestModel data = res['data'];
-      if (data.tag?.isNotEmpty == true) {
-        searchSuggestList.value = data.tag!;
+    if (res case Success(:final response)) {
+      if (response.tag?.isNotEmpty == true) {
+        searchSuggestList.value = response.tag!;
       }
     }
   }

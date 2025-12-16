@@ -17,8 +17,8 @@ import 'package:PiliPlus/pages/dynamics_mention/controller.dart';
 import 'package:PiliPlus/pages/emote/view.dart';
 import 'package:PiliPlus/pages/video/controller.dart';
 import 'package:PiliPlus/pages/video/reply_search_item/view.dart';
-import 'package:PiliPlus/utils/context_ext.dart';
 import 'package:PiliPlus/utils/duration_utils.dart';
+import 'package:PiliPlus/utils/extension/context_ext.dart';
 import 'package:PiliPlus/utils/grid.dart';
 import 'package:PiliPlus/utils/path_utils.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
@@ -367,7 +367,7 @@ class _ReplyPageState extends CommonRichTextPubPageState<ReplyPage> {
               icon: Icon(Icons.my_location, size: 28, color: color),
               title: '视频进度',
             ),
-            if (isRoot)
+            if (isRoot && widget.canUploadPic)
               item(
                 onTap: () async {
                   if (pathList.length >= limit) {

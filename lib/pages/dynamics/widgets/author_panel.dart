@@ -11,9 +11,10 @@ import 'package:PiliPlus/models/dynamics/result.dart';
 import 'package:PiliPlus/pages/dynamics/controller.dart';
 import 'package:PiliPlus/pages/save_panel/view.dart';
 import 'package:PiliPlus/utils/accounts.dart';
-import 'package:PiliPlus/utils/context_ext.dart';
 import 'package:PiliPlus/utils/date_utils.dart';
-import 'package:PiliPlus/utils/extension.dart';
+import 'package:PiliPlus/utils/extension/context_ext.dart';
+import 'package:PiliPlus/utils/extension/string_ext.dart';
+import 'package:PiliPlus/utils/extension/theme_ext.dart';
 import 'package:PiliPlus/utils/feed_back.dart';
 import 'package:PiliPlus/utils/page_utils.dart';
 import 'package:PiliPlus/utils/request_utils.dart';
@@ -30,7 +31,7 @@ class AuthorPanel extends StatelessWidget {
   final bool isSave;
   final bool isDetail;
   final ValueChanged? onRemove;
-  final Function(bool isTop, dynamic dynId)? onSetTop;
+  final void Function(bool isTop, Object dynId)? onSetTop;
   final VoidCallback? onBlock;
 
   const AuthorPanel({

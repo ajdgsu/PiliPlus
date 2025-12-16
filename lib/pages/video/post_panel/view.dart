@@ -13,7 +13,7 @@ import 'package:PiliPlus/pages/video/controller.dart';
 import 'package:PiliPlus/pages/video/post_panel/popup_menu_text.dart';
 import 'package:PiliPlus/plugin/pl_player/controller.dart';
 import 'package:PiliPlus/utils/duration_utils.dart';
-import 'package:PiliPlus/utils/extension.dart';
+import 'package:PiliPlus/utils/extension/iterable_ext.dart';
 import 'package:extended_nested_scroll_view/extended_nested_scroll_view.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
@@ -361,7 +361,7 @@ class _PostPanelState extends State<PostPanel>
                   children: [
                     PopupMenuText(
                       title: '分类',
-                      initialValue: item.category,
+                      value: () => item.category,
                       onSelected: (e) {
                         bool flag = false;
                         if (item.category == SegmentType.exclusive_access ||
@@ -406,7 +406,7 @@ class _PostPanelState extends State<PostPanel>
                     ),
                     PopupMenuText(
                       title: '行为类别',
-                      initialValue: item.actionType,
+                      value: () => item.actionType,
                       onSelected: (e) {
                         bool flag = false;
                         if (item.actionType == ActionType.full) {
