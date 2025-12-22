@@ -91,6 +91,7 @@ class _AboutPageState extends State<AboutPage> {
                   context: context,
                   builder: (context) {
                     return AlertDialog(
+                      constraints: StyleString.dialogFixedConstraints,
                       content: TextField(
                         autofocus: true,
                         onSubmitted: (value) {
@@ -451,10 +452,7 @@ Future<void> showImportExportDialog<T>(
               builder: (context) {
                 return AlertDialog(
                   title: Text('输入$title'),
-                  constraints: const BoxConstraints(
-                    minWidth: 420,
-                    maxWidth: 420,
-                  ),
+                  constraints: StyleString.dialogFixedConstraints,
                   content: TextFormField(
                     key: key,
                     minLines: 4,

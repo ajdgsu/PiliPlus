@@ -615,7 +615,7 @@ class PlPlayerController {
     int? seasonId,
     int? pgcType,
     VideoType? videoType,
-    VoidCallback? callback,
+    VoidCallback? onInit,
     Volume? volume,
     String? dirPath,
     String? typeTag,
@@ -680,7 +680,7 @@ class PlPlayerController {
       // listen the video player events
       startListeners();
       await _initializePlayer();
-      callback?.call();
+      onInit?.call();
     } catch (err, stackTrace) {
       dataStatus.status.value = DataStatus.error;
       if (kDebugMode) {
@@ -1337,6 +1337,7 @@ class PlPlayerController {
   Timer? volumeTimer;
   final RxBool volumeInterceptEventStream = false.obs;
 
+  static final double maxVolume = PlatformUtils.isDesktop ? 2.0 : 1.0;
   Future<void> setVolume(double volume) async {
     if (this.volume.value != volume) {
       this.volume.value = volume;
@@ -1721,7 +1722,9 @@ class PlPlayerController {
     disableAutoEnterPip();
     setPlayCallBack(null);
     dmState.clear();
-    _clearPreview();
+    if (showSeekPreview) {
+      _clearPreview();
+    }
     Utils.channel.setMethodCallHandler(null);
     _timer?.cancel();
     _timerForSeek?.cancel();
@@ -1744,6 +1747,9 @@ class PlPlayerController {
     }
 
     await removeListeners();
+    subscriptions.clear();
+    _positionListeners.clear();
+    _statusListeners.clear();
     if (playerStatus.playing) {
       WakelockPlus.disable();
     }
@@ -1779,7 +1785,7 @@ class PlPlayerController {
     );
   }
 
-  Map<String, WeakReference<ui.Image>>? previewCache;
+  late final Map<String, ui.Image?> previewCache = {};
   LoadingState<VideoShotData>? videoShot;
   late final RxBool showPreview = false.obs;
   late final showSeekPreview = Pref.showSeekPreview;
@@ -1807,14 +1813,10 @@ class PlPlayerController {
     showPreview.value = false;
     previewIndex.value = null;
     videoShot = null;
-    previewCache
-      ?..forEach((_, ref) {
-        try {
-          ref.target?.dispose();
-        } catch (_) {}
-      })
-      ..clear();
-    previewCache = null;
+    for (var i in previewCache.values) {
+      i?.dispose();
+    }
+    previewCache.clear();
   }
 
   Future<void> getVideoShot() async {

@@ -9,13 +9,13 @@ import 'package:get/get.dart';
 class FollowItem extends StatelessWidget {
   final FollowItemModel item;
   final bool? isOwner;
-  final ValueChanged? callback;
+  final ValueChanged? afterMod;
   final ValueChanged<UserModel>? onSelect;
 
   const FollowItem({
     super.key,
     required this.item,
-    this.callback,
+    this.afterMod,
     this.isOwner,
     this.onSelect,
   });
@@ -33,6 +33,7 @@ class FollowItem extends StatelessWidget {
                 mid: item.mid,
                 name: item.uname!,
                 avatar: item.face!,
+                selected: true,
               ),
             );
           } else {
@@ -84,7 +85,7 @@ class FollowItem extends StatelessWidget {
                     context: context,
                     mid: item.mid,
                     isFollow: item.attribute != -1,
-                    callback: callback,
+                    afterMod: afterMod,
                   ),
                   style: FilledButton.styleFrom(
                     visualDensity: .compact,

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' show min;
 import 'dart:ui';
 
+import 'package:PiliPlus/common/constants.dart';
 import 'package:PiliPlus/common/widgets/pair.dart';
 import 'package:PiliPlus/common/widgets/progress_bar/segment_progress_bar.dart';
 import 'package:PiliPlus/grpc/bilibili/app/listener/v1.pbenum.dart'
@@ -1014,7 +1015,7 @@ class VideoDetailController extends GetxController
     }
   }
 
-  ({int mode, int fontsize, Color color})? dmConfig;
+  ({int mode, int fontSize, Color color})? dmConfig;
   String? savedDanmaku;
 
   /// 发送弹幕
@@ -1027,7 +1028,7 @@ class VideoDetailController extends GetxController
     if (isPlaying) {
       await plPlayerController.pause();
     }
-    await Navigator.of(Get.context!).push(
+    await Get.key.currentState!.push(
       GetDialogRoute(
         pageBuilder: (buildContext, animation, secondaryAnimation) {
           return SendDanmakuPanel(
@@ -1036,7 +1037,7 @@ class VideoDetailController extends GetxController
             progress: plPlayerController.position.value.inMilliseconds,
             initialValue: savedDanmaku,
             onSave: (danmaku) => savedDanmaku = danmaku,
-            callback: (danmakuModel) {
+            onSuccess: (danmakuModel) {
               savedDanmaku = null;
               plPlayerController.danmakuController?.addDanmaku(danmakuModel);
             },
@@ -1171,7 +1172,7 @@ class VideoDetailController extends GetxController
       seasonId: isUgc ? null : seasonId,
       pgcType: isUgc ? null : pgcType,
       videoType: videoType,
-      callback: () async {
+      onInit: () async {
         if (videoState.value is! Success) {
           videoState.value = const Success(null);
         }
@@ -1656,6 +1657,10 @@ class VideoDetailController extends GetxController
 
   @override
   void onClose() {
+    cancelSkipTimer();
+    positionSubscription?.cancel();
+    positionSubscription = null;
+    cid.close();
     if (isFileSource) {
       cacheLocalProgress();
     }
@@ -1942,7 +1947,7 @@ class VideoDetailController extends GetxController
     showDialog(
       context: Get.context!,
       builder: (context) => AlertDialog(
-        constraints: const BoxConstraints(maxWidth: 425, minWidth: 425),
+        constraints: StyleString.dialogFixedConstraints,
         title: const Text('播放地址'),
         content: Column(
           spacing: 20,

@@ -64,6 +64,8 @@ class UgcIntroController extends CommonIntroController with ReloadMixin {
 
   AiConclusionResult? aiConclusionResult;
 
+  late final Map<int?, bool> seasonFavState = {};
+
   @override
   void onInit() {
     super.onInit();
@@ -449,7 +451,7 @@ class UgcIntroController extends CommonIntroController with ReloadMixin {
         mid: mid,
         isFollow: attr != 0,
         followStatus: followStatus,
-        callback: (attribute) {
+        afterMod: (attribute) {
           followStatus['attribute'] = attribute;
           Future.delayed(const Duration(milliseconds: 500), queryFollowStatus);
         },
