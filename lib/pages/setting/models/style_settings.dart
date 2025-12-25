@@ -25,6 +25,7 @@ import 'package:PiliPlus/pages/setting/widgets/select_dialog.dart';
 import 'package:PiliPlus/pages/setting/widgets/slide_dialog.dart';
 import 'package:PiliPlus/plugin/pl_player/utils/fullscreen.dart';
 import 'package:PiliPlus/utils/extension/get_ext.dart';
+import 'package:PiliPlus/utils/extension/num_ext.dart';
 import 'package:PiliPlus/utils/extension/theme_ext.dart';
 import 'package:PiliPlus/utils/global_data.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
@@ -245,7 +246,7 @@ List<SettingsModel> get styleSettings => [
         },
       );
       if (result != null) {
-        MainController mainController = Get.put(MainController())
+        final mainController = Get.find<MainController>()
           ..dynamicBadgeMode = DynamicBadgeMode.values[result.index];
         if (mainController.dynamicBadgeMode != DynamicBadgeMode.hidden) {
           mainController.getUnreadDynamic();
@@ -275,7 +276,7 @@ List<SettingsModel> get styleSettings => [
         },
       );
       if (result != null) {
-        MainController mainController = Get.put(MainController())
+        final mainController = Get.find<MainController>()
           ..msgBadgeMode = DynamicBadgeMode.values[result.index];
         if (mainController.msgBadgeMode != DynamicBadgeMode.hidden) {
           mainController.queryUnreadMsg(true);
@@ -304,7 +305,7 @@ List<SettingsModel> get styleSettings => [
         },
       );
       if (result != null) {
-        MainController mainController = Get.put(MainController())
+        final mainController = Get.find<MainController>()
           ..msgUnReadTypes = result;
         if (mainController.msgBadgeMode != DynamicBadgeMode.hidden) {
           mainController.queryUnreadMsg();

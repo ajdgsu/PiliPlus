@@ -28,7 +28,7 @@ import 'package:easy_debounce/easy_throttle.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show LengthLimitingTextInputFormatter;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
-import 'package:get/get.dart' hide FormData, MultipartFile;
+import 'package:get/get.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mime/mime.dart';
@@ -43,13 +43,14 @@ class EditProfilePage extends StatefulWidget {
 class _EditProfilePageState extends State<EditProfilePage> {
   LoadingState<AccountMyInfoData> _loadingState =
       LoadingState<AccountMyInfoData>.loading();
-  late final _textController = TextEditingController();
+  late final TextEditingController _textController;
   late final _imagePicker = ImagePicker();
   AccountService accountService = Get.find<AccountService>();
 
   @override
   void initState() {
     super.initState();
+    _textController = TextEditingController();
     _getInfo();
   }
 
@@ -363,7 +364,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
       'platform': 'android',
       's_locale': 'zh_CN',
       'statistics': Constants.statistics,
-      'ts': (DateTime.now().millisecondsSinceEpoch ~/ 1000).toString(),
       if (type == ProfileType.uname)
         'uname': _textController.text
       else if (type == ProfileType.sign)
@@ -500,15 +500,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 toolbarColor: theme.colorScheme.secondaryContainer,
                 toolbarWidgetColor: theme.colorScheme.onSecondaryContainer,
                 statusBarLight: theme.colorScheme.isLight,
-                aspectRatioPresets: [CropAspectRatioPresetCustom()],
+                aspectRatioPresets: const [CropAspectRatioPresetCustom()],
                 lockAspectRatio: true,
                 hideBottomControls: true,
                 cropStyle: CropStyle.circle,
-                initAspectRatio: CropAspectRatioPresetCustom(),
+                initAspectRatio: const CropAspectRatioPresetCustom(),
               ),
               IOSUiSettings(
                 title: '裁剪',
-                aspectRatioPresets: [CropAspectRatioPresetCustom()],
+                aspectRatioPresets: const [CropAspectRatioPresetCustom()],
                 cropStyle: CropStyle.circle,
                 aspectRatioLockEnabled: true,
                 resetAspectRatioEnabled: false,
@@ -556,8 +556,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
 }
 
 class CropAspectRatioPresetCustom implements CropAspectRatioPresetData {
+  const CropAspectRatioPresetCustom();
+
   @override
-  (int, int)? get data => (1, 1);
+  (int, int) get data => const (1, 1);
 
   @override
   String get name => '1x1 (customized)';

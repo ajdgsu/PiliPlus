@@ -32,6 +32,7 @@ import 'package:PiliPlus/plugin/pl_player/models/video_fit_type.dart';
 import 'package:PiliPlus/plugin/pl_player/utils/fullscreen.dart';
 import 'package:PiliPlus/services/service_locator.dart';
 import 'package:PiliPlus/utils/accounts.dart';
+import 'package:PiliPlus/utils/extension/num_ext.dart';
 import 'package:PiliPlus/utils/extension/string_ext.dart';
 import 'package:PiliPlus/utils/feed_back.dart';
 import 'package:PiliPlus/utils/image_utils.dart';
@@ -42,8 +43,8 @@ import 'package:PiliPlus/utils/storage.dart';
 import 'package:PiliPlus/utils/storage_key.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:PiliPlus/utils/utils.dart';
+import 'package:archive/archive.dart' show getCrc32;
 import 'package:canvas_danmaku/canvas_danmaku.dart';
-import 'package:crclib/catalog.dart';
 import 'package:dio/dio.dart' show Options;
 import 'package:easy_debounce/easy_throttle.dart';
 import 'package:floating/floating.dart';
@@ -329,9 +330,10 @@ class PlPlayerController {
   bool showDanmaku = true;
   Set<int> dmState = <int>{};
   late final mergeDanmaku = Pref.mergeDanmaku;
-  late final String midHash = Crc32Xz()
-      .convert(utf8.encode(Accounts.main.mid.toString()))
-      .toRadixString(16);
+  late final String midHash = getCrc32(
+    ascii.encode(Accounts.main.mid.toString()),
+    0,
+  ).toRadixString(16);
   // 弹幕相关配置
   late Set<int> blockTypes = Pref.danmakuBlockType;
   late bool blockColorful = blockTypes.contains(6);
@@ -1855,8 +1857,9 @@ class PlPlayerController {
     videoPlayerController?.screenshot(format: 'image/png').then((value) {
       if (value != null) {
         SmartDialog.showToast('点击弹窗保存截图');
-        Get.dialog(
-          GestureDetector(
+        showDialog(
+          context: Get.context!,
+          builder: (context) => GestureDetector(
             onTap: () {
               Get.back();
               ImageUtils.saveByteImg(
