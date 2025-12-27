@@ -113,10 +113,7 @@ class _DynamicDetailPageState extends CommonDynPageState<DynamicDetailPage> {
               ),
             ),
             buildReplyHeader(theme),
-            Obx(
-              key: controller.replyKey,
-              () => replyList(theme, controller.loadingState.value),
-            ),
+            Obx(() => replyList(theme, controller.loadingState.value)),
           ],
         ),
       );
@@ -213,6 +210,7 @@ class _DynamicDetailPageState extends CommonDynPageState<DynamicDetailPage> {
             final primary = theme.colorScheme.primary;
             final outline = theme.colorScheme.outline;
             final btnStyle = TextButton.styleFrom(
+              tapTargetSize: .padded,
               padding: const EdgeInsets.symmetric(horizontal: 15),
               foregroundColor: outline,
             );
