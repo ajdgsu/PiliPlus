@@ -32,6 +32,7 @@ import 'package:PiliPlus/plugin/pl_player/models/video_fit_type.dart';
 import 'package:PiliPlus/plugin/pl_player/utils/fullscreen.dart';
 import 'package:PiliPlus/services/service_locator.dart';
 import 'package:PiliPlus/utils/accounts.dart';
+import 'package:PiliPlus/utils/extension/box_ext.dart';
 import 'package:PiliPlus/utils/extension/num_ext.dart';
 import 'package:PiliPlus/utils/extension/string_ext.dart';
 import 'package:PiliPlus/utils/feed_back.dart';
@@ -321,9 +322,8 @@ class PlPlayerController {
     }
   }
 
-  /// 弹幕权重
+  // 弹幕相关配置
   late final enableTapDm = PlatformUtils.isMobile && Pref.enableTapDm;
-  late int danmakuWeight = Pref.danmakuWeight;
   late RuleFilter filters = Pref.danmakuFilterRule;
   // 关联弹幕控制器
   DanmakuController<DanmakuExtra>? danmakuController;
@@ -334,26 +334,16 @@ class PlPlayerController {
     ascii.encode(Accounts.main.mid.toString()),
     0,
   ).toRadixString(16);
-  // 弹幕相关配置
-  late Set<int> blockTypes = Pref.danmakuBlockType;
-  late bool blockColorful = blockTypes.contains(6);
-  late double showArea = Pref.danmakuShowArea;
-  late RxDouble danmakuOpacity = Pref.danmakuOpacity.obs;
-  late double danmakuFontScale = Pref.danmakuFontScale;
-  late double danmakuFontScaleFS = Pref.danmakuFontScaleFS;
-  late double danmakuStrokeWidth = Pref.strokeWidth;
-  late int danmakuFontWeight = Pref.fontWeight;
-  late bool massiveMode = Pref.danmakuMassiveMode;
-  late double danmakuDuration = Pref.danmakuDuration;
-  late double danmakuStaticDuration = Pref.danmakuStaticDuration;
+  late final RxDouble danmakuOpacity = Pref.danmakuOpacity.obs;
+
   late List<double> speedList = Pref.speedList;
   late bool enableAutoLongPressSpeed = Pref.enableAutoLongPressSpeed;
   late final showControlDuration = Pref.enableLongShowControl
       ? const Duration(seconds: 30)
       : const Duration(seconds: 3);
+  // 字幕
   late double subtitleFontScale = Pref.subtitleFontScale;
   late double subtitleFontScaleFS = Pref.subtitleFontScaleFS;
-  late double danmakuLineHeight = Pref.danmakuLineHeight;
   late int subtitlePaddingH = Pref.subtitlePaddingH;
   late int subtitlePaddingB = Pref.subtitlePaddingB;
   late double subtitleBgOpacity = Pref.subtitleBgOpacity;
@@ -1033,7 +1023,7 @@ class PlPlayerController {
         );
 
         /// 触发回调事件
-        for (var element in _statusListeners) {
+        for (final element in _statusListeners) {
           element(event ? PlayerStatus.playing : PlayerStatus.paused);
         }
         if (videoPlayerController!.state.position.inSeconds != 0) {
@@ -1045,7 +1035,7 @@ class PlPlayerController {
           playerStatus.value = PlayerStatus.completed;
 
           /// 触发回调事件
-          for (var element in _statusListeners) {
+          for (final element in _statusListeners) {
             element(PlayerStatus.completed);
           }
         } else {
@@ -1062,7 +1052,7 @@ class PlPlayerController {
         }
 
         /// 触发回调事件
-        for (var element in _positionListeners) {
+        for (final element in _positionListeners) {
           element(event);
         }
         makeHeartBeat(event.inSeconds);
@@ -1392,7 +1382,7 @@ class PlPlayerController {
         _dataListenerForVideoFit = dataStatus.status.listen((status) {
           if (status == DataStatus.loaded) {
             _stopListenerForVideoFit();
-            var attr = VideoFitType.values[fitValue];
+            final attr = VideoFitType.values[fitValue];
             if (attr == VideoFitType.none || attr == VideoFitType.scaleDown) {
               videoFit.value = attr;
             }
@@ -1677,24 +1667,8 @@ class PlPlayerController {
     video.put(VideoBoxKey.playRepeat, type.index);
   }
 
-  void putDanmakuSettings() {
-    setting.putAll({
-      SettingBoxKey.danmakuWeight: danmakuWeight,
-      SettingBoxKey.danmakuBlockType: blockTypes.toList(),
-      SettingBoxKey.danmakuShowArea: showArea,
-      SettingBoxKey.danmakuOpacity: danmakuOpacity.value,
-      SettingBoxKey.danmakuFontScale: danmakuFontScale,
-      SettingBoxKey.danmakuFontScaleFS: danmakuFontScaleFS,
-      SettingBoxKey.danmakuDuration: danmakuDuration,
-      SettingBoxKey.danmakuStaticDuration: danmakuStaticDuration,
-      SettingBoxKey.strokeWidth: danmakuStrokeWidth,
-      SettingBoxKey.fontWeight: danmakuFontWeight,
-      SettingBoxKey.danmakuLineHeight: danmakuLineHeight,
-    });
-  }
-
   void putSubtitleSettings() {
-    setting.putAll({
+    setting.putAllNE({
       SettingBoxKey.subtitleFontScale: subtitleFontScale,
       SettingBoxKey.subtitleFontScaleFS: subtitleFontScaleFS,
       SettingBoxKey.subtitlePaddingH: subtitlePaddingH,
@@ -1719,6 +1693,7 @@ class PlPlayerController {
     }
 
     _playerCount = 0;
+    danmakuController = null;
     _stopListenerForVideoFit();
     _stopListenerForEnterFullScreen();
     disableAutoEnterPip();
@@ -1799,14 +1774,13 @@ class PlPlayerController {
       getVideoShot();
       return;
     }
-    if (videoShot case Success<VideoShotData> success) {
-      final data = success.response;
+    if (videoShot case Success(:final response)) {
       if (!showPreview.value) {
         showPreview.value = true;
       }
       previewIndex.value = max(
         0,
-        (data.index.where((item) => item <= seconds).length - 2),
+        (response.index.where((item) => item <= seconds).length - 2),
       );
     }
   }
@@ -1815,7 +1789,7 @@ class PlPlayerController {
     showPreview.value = false;
     previewIndex.value = null;
     videoShot = null;
-    for (var i in previewCache.values) {
+    for (final i in previewCache.values) {
       i?.dispose();
     }
     previewCache.clear();
@@ -1823,7 +1797,7 @@ class PlPlayerController {
 
   Future<void> getVideoShot() async {
     try {
-      var res = await Request().get(
+      final res = await Request().get(
         '/x/player/videoshot',
         queryParameters: {
           // 'aid': IdUtils.bv2av(_bvid),

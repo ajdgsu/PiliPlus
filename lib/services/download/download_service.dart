@@ -5,6 +5,7 @@ import 'dart:io' show Directory, File;
 import 'package:PiliPlus/grpc/dm.dart';
 import 'package:PiliPlus/http/download.dart';
 import 'package:PiliPlus/http/init.dart';
+import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/models/common/video/video_quality.dart';
 import 'package:PiliPlus/models_new/download/bili_download_entry_info.dart';
 import 'package:PiliPlus/models_new/download/bili_download_media_file_info.dart';
@@ -321,9 +322,9 @@ class DownloadService extends GetxService {
         ]);
 
         final danmaku = res.removeAt(0).data;
-        for (var i in res) {
-          if (i.isSuccess) {
-            danmaku.elems.addAll(i.data.elems);
+        for (final i in res) {
+          if (i case Success(:final response)) {
+            danmaku.elems.addAll(response.elems);
           }
         }
         res.clear();
@@ -596,7 +597,7 @@ typedef SetNotifier = Set<VoidCallback>;
 
 extension SetNotifierExt on SetNotifier {
   void refresh() {
-    for (var i in this) {
+    for (final i in this) {
       i();
     }
   }

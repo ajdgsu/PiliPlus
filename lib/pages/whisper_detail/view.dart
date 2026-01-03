@@ -16,6 +16,7 @@ import 'package:PiliPlus/pages/whisper_detail/widget/chat_item.dart';
 import 'package:PiliPlus/pages/whisper_link_setting/view.dart';
 import 'package:PiliPlus/utils/extension/file_ext.dart';
 import 'package:PiliPlus/utils/extension/iterable_ext.dart';
+import 'package:PiliPlus/utils/extension/num_ext.dart';
 import 'package:PiliPlus/utils/extension/widget_ext.dart';
 import 'package:PiliPlus/utils/feed_back.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
@@ -91,6 +92,7 @@ class _WhisperDetailPageState
                 Image.asset(
                   'assets/images/live/live.gif',
                   height: 16,
+                  cacheHeight: 16.cacheSize(context),
                   filterQuality: FilterQuality.low,
                 ),
               ],
@@ -150,7 +152,7 @@ class _WhisperDetailPageState
   Widget _buildBody(LoadingState<List<Msg>?> loadingState) {
     return switch (loadingState) {
       Loading() => loadingWidget,
-      Success(:var response) =>
+      Success(:final response) =>
         response != null && response.isNotEmpty
             ? ListView.separated(
                 shrinkWrap: true,
@@ -180,7 +182,7 @@ class _WhisperDetailPageState
                     const SizedBox(height: 12),
               )
             : scrollErrorWidget(onReload: _whisperDetailController.onReload),
-      Error(:var errMsg) => scrollErrorWidget(
+      Error(:final errMsg) => scrollErrorWidget(
         errMsg: errMsg,
         onReload: _whisperDetailController.onReload,
       ),

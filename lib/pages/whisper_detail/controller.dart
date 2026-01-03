@@ -56,7 +56,7 @@ class WhisperDetailController extends CommonListController<RspSessionMsg, Msg> {
 
   // 消息标记已读
   Future<void> ackSessionMsg(int msgSeqno) async {
-    var res = await MsgHttp.ackSessionMsg(
+    final res = await MsgHttp.ackSessionMsg(
       talkerId: talkerId,
       ackSeqno: msgSeqno,
     );
@@ -82,7 +82,7 @@ class WhisperDetailController extends CommonListController<RspSessionMsg, Msg> {
       SmartDialog.showToast('请先登录');
       return;
     }
-    final result = await ImGrpc.sendMsg(
+    final res = await ImGrpc.sendMsg(
       senderUid: account.mid,
       receiverId: mid!,
       content: msgType == 5
@@ -91,7 +91,7 @@ class WhisperDetailController extends CommonListController<RspSessionMsg, Msg> {
       msgType: MsgType.values[msgType ?? (picMsg != null ? 2 : 1)],
     );
     SmartDialog.dismiss();
-    if (result.isSuccess) {
+    if (res.isSuccess) {
       if (msgType == 5) {
         loadingState
           ..value.data![index!].msgStatus = 1
@@ -103,7 +103,7 @@ class WhisperDetailController extends CommonListController<RspSessionMsg, Msg> {
         SmartDialog.showToast('发送成功');
       }
     } else {
-      result.toast();
+      res.toast();
     }
     _isSending = false;
   }

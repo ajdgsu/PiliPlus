@@ -178,7 +178,7 @@ Widget addWidget(
                               : btn.disable == 1
                               ? null
                               : () async {
-                                  var res = await DynamicsHttp.dynReserve(
+                                  final res = await DynamicsHttp.dynReserve(
                                     reserveId: reserve.rid,
                                     curBtnStatus: btn.status,
                                     dynamicIdStr: idStr,
@@ -330,7 +330,9 @@ Widget addWidget(
                           width: 45,
                           height: 45,
                           src: e.cover,
-                          radius: 6,
+                          borderRadius: const BorderRadius.all(
+                            Radius.circular(6),
+                          ),
                         ),
                         const SizedBox(width: 10),
                       ],
@@ -498,7 +500,9 @@ Widget addWidget(
                     width: 45,
                     height: 45,
                     src: content.cover,
-                    radius: 6,
+                    borderRadius: const BorderRadius.all(
+                      Radius.circular(6),
+                    ),
                   ),
                   const SizedBox(width: 10),
                 ],
@@ -567,7 +571,7 @@ Widget addWidget(
                   mainAxisSize: .min,
                   children: [
                     NetworkImgLayer(
-                      radius: 0,
+                      type: .emote,
                       width: 30,
                       height: 30,
                       src: team.pic,

@@ -101,16 +101,12 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
     onReload();
   }
 
-  (bool inputDisable, bool canUploadPic, String? hint) get replyHint {
+  (bool inputDisable, String? hint) get replyHint {
     String? hint;
-    bool canUploadPic = true;
     bool inputDisable = false;
     try {
       if (subjectControl case final subjectControl?) {
         inputDisable = subjectControl.inputDisable;
-        canUploadPic =
-            subjectControl.uploadPictureIconState == .EditorIconState_DEFAULT ||
-            subjectControl.uploadPictureIconState == .EditorIconState_ENABLE;
         if (subjectControl.hasRootText()) {
           final rootText = subjectControl.rootText;
           if (inputDisable) {
@@ -122,7 +118,7 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
         }
       }
     } catch (_) {}
-    return (inputDisable, canUploadPic, hint);
+    return (inputDisable, hint);
   }
 
   void onReply(
@@ -131,9 +127,8 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
     ReplyInfo? replyItem,
     int? replyType,
   }) {
-    if (loadingState.value case Error error) {
-      final errMsg = error.errMsg;
-      if (errMsg != null && (error.code == 12061 || error.code == 12002)) {
+    if (loadingState.value case Error(:final errMsg, :final code)) {
+      if (errMsg != null && (code == 12061 || code == 12002)) {
         SmartDialog.showToast(errMsg);
         return;
       }
@@ -141,7 +136,7 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
 
     assert(replyItem != null || (oid != null && replyType != null));
 
-    final (bool inputDisable, bool canUploadPic, String? hint) = replyHint;
+    final (bool inputDisable, String? hint) = replyHint;
     if (inputDisable) {
       return;
     }
@@ -159,7 +154,9 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
                 replyType: replyItem?.type.toInt() ?? replyType!,
                 replyItem: replyItem,
                 items: savedReplies[key],
-                canUploadPic: canUploadPic,
+
+                /// hd api deprecated
+                // canUploadPic: canUploadPic,
                 onSave: (reply) {
                   if (reply.isEmpty) {
                     savedReplies.remove(key);
@@ -180,13 +177,12 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
             if (res != null) {
               savedReplies.remove(key);
               ReplyInfo replyInfo = RequestUtils.replyCast(res);
-              if (loadingState.value.isSuccess) {
-                List<ReplyInfo>? list = loadingState.value.data;
-                if (list == null) {
+              if (loadingState.value case Success(:final response)) {
+                if (response == null) {
                   loadingState.value = Success([replyInfo]);
                 } else {
                   if (oid != null) {
-                    list.insert(hasUpTop ? 1 : 0, replyInfo);
+                    response.insert(hasUpTop ? 1 : 0, replyInfo);
                   } else {
                     replyItem!
                       ..count += 1
@@ -209,9 +205,8 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
   }
 
   void onRemove(int index, ReplyInfo item, int? subIndex) {
-    List<ReplyInfo> list = loadingState.value.data!;
     if (subIndex == null) {
-      list.removeAt(index);
+      loadingState.value.data!.removeAt(index);
     } else {
       item
         ..count -= 1
@@ -244,12 +239,12 @@ abstract class ReplyController<R> extends CommonListController<R, ReplyInfo> {
       isUpTop: isUpTop,
     );
     if (res.isSuccess) {
-      List<ReplyInfo> list = loadingState.value.data!;
       item.replyControl.isUpTop = !isUpTop;
       if (!isUpTop && index != 0) {
-        list[0].replyControl.isUpTop = false;
-        final item = list.removeAt(index);
-        list.insert(0, item);
+        final list = loadingState.value.data!;
+        list
+          ..first.replyControl.isUpTop = false
+          ..insert(0, list.removeAt(index));
       }
       loadingState.refresh();
       SmartDialog.showToast('${isUpTop ? '取消' : ''}置顶成功');

@@ -16,6 +16,7 @@ import 'package:PiliPlus/pages/video/introduction/ugc/controller.dart';
 import 'package:PiliPlus/pages/video/reply/widgets/reply_item_grpc.dart';
 import 'package:PiliPlus/utils/date_utils.dart';
 import 'package:PiliPlus/utils/extension/context_ext.dart';
+import 'package:PiliPlus/utils/extension/num_ext.dart';
 import 'package:PiliPlus/utils/extension/theme_ext.dart';
 import 'package:PiliPlus/utils/image_utils.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
@@ -90,7 +91,7 @@ class _SavePanelState extends State<SavePanel> {
   @override
   void initState() {
     super.initState();
-    if (_item case ReplyInfo reply) {
+    if (_item case final ReplyInfo reply) {
       itemType = '评论';
       final currentRoute = Get.currentRoute;
       late final hasRoot = reply.hasRoot();
@@ -219,7 +220,7 @@ class _SavePanelState extends State<SavePanel> {
       }
 
       if (kDebugMode) debugPrint(uri);
-    } else if (_item case DynamicItemModel i) {
+    } else if (_item case final DynamicItemModel i) {
       uri = parseDyn(i);
 
       if (kDebugMode) debugPrint(uri);
@@ -299,7 +300,7 @@ class _SavePanelState extends State<SavePanel> {
       RenderRepaintBoundary boundary =
           boundaryKey.currentContext!.findRenderObject()
               as RenderRepaintBoundary;
-      var image = await boundary.toImage(pixelRatio: 3);
+      final image = await boundary.toImage(pixelRatio: 3);
       ByteData? byteData = await image.toByteData(format: ImageByteFormat.png);
       Uint8List pngBytes = byteData!.buffer.asUint8List();
       String picName =
@@ -375,7 +376,7 @@ class _SavePanelState extends State<SavePanel> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (_item case ReplyInfo reply)
+                          if (_item case final ReplyInfo reply)
                             IgnorePointer(
                               child: ReplyItemGrpc(
                                 replyItem: reply,
@@ -384,7 +385,7 @@ class _SavePanelState extends State<SavePanel> {
                                 upMid: widget.upMid,
                               ),
                             )
-                          else if (_item case DynamicItemModel dyn)
+                          else if (_item case final DynamicItemModel dyn)
                             IgnorePointer(
                               child: DynamicPanel(
                                 item: dyn,
@@ -411,13 +412,15 @@ class _SavePanelState extends State<SavePanel> {
                               child: Row(
                                 children: [
                                   NetworkImgLayer(
-                                    radius: 6,
                                     src: cover!,
                                     height: coverSize,
                                     width: coverType == _CoverType.def16_9
                                         ? coverSize * 16 / 9
                                         : coverSize,
                                     quality: 100,
+                                    borderRadius: const BorderRadius.all(
+                                      Radius.circular(6),
+                                    ),
                                   ),
                                   const SizedBox(width: 10),
                                   Expanded(
@@ -533,6 +536,7 @@ class _SavePanelState extends State<SavePanel> {
                                       child: Image.asset(
                                         'assets/images/logo/logo_2.png',
                                         width: 100,
+                                        cacheWidth: 100.cacheSize(context),
                                         color:
                                             theme.colorScheme.onSurfaceVariant,
                                       ),

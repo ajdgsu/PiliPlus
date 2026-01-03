@@ -43,7 +43,7 @@ abstract final class RequestUtils {
     if (!account.isLogin) {
       return;
     }
-    var res = await UserHttp.historyStatus(account: account);
+    final res = await UserHttp.historyStatus(account: account);
     if (res case Success(:final response)) {
       GStorage.localCache.put(LocalCacheKey.historyPause, response);
     }
@@ -107,7 +107,7 @@ abstract final class RequestUtils {
     }
     feedBack();
     if (!isFollow) {
-      var res = await VideoHttp.relationMod(
+      final res = await VideoHttp.relationMod(
         mid: mid,
         act: 1,
         reSrc: 11,
@@ -165,7 +165,7 @@ abstract final class RequestUtils {
                     dense: true,
                     onTap: () async {
                       Get.back();
-                      var result = await showModalBottomSheet<Set<int>>(
+                      final result = await showModalBottomSheet<Set<int>>(
                         context: context,
                         useSafeArea: true,
                         isScrollControlled: true,
@@ -208,7 +208,7 @@ abstract final class RequestUtils {
                     dense: true,
                     onTap: () async {
                       Get.back();
-                      var res = await VideoHttp.relationMod(
+                      final res = await VideoHttp.relationMod(
                         mid: mid,
                         act: 2,
                         reSrc: 11,
@@ -257,7 +257,7 @@ abstract final class RequestUtils {
 
   // static Future<dynamic> getWwebid(mid) async {
   //   try {
-  //     var response = await Request().get(
+  //     final response = await Request().get(
   //       '${HttpString.spaceBaseUrl}/$mid/dynamic',
   //       options: Options(
   //         extra: {'account': AnonymousAccount()},
@@ -278,18 +278,17 @@ abstract final class RequestUtils {
     try {
       if (id != null) {
         await Future.delayed(const Duration(milliseconds: 450));
-        var res = await DynamicsHttp.dynamicDetail(id: id);
-        if (res.isSuccess) {
+        final res = await DynamicsHttp.dynamicDetail(id: id);
+        if (res case final Success<DynamicItemModel> e) {
           final ctr = Get.find<DynamicsTabController>(tag: 'all');
-          if (ctr.loadingState.value.isSuccess) {
-            List<DynamicItemModel>? list = ctr.loadingState.value.data;
-            if (list != null) {
-              list.insert(0, res.data);
+          if (ctr.loadingState.value case Success(:final response)) {
+            if (response != null) {
+              response.insert(0, e.response);
               ctr.loadingState.refresh();
               return;
             }
           }
-          ctr.loadingState.value = Success([res.data]);
+          ctr.loadingState.value = Success([e.response]);
         }
       }
     } catch (e) {
@@ -308,7 +307,10 @@ abstract final class RequestUtils {
           if (!isManual) {
             await Future.delayed(const Duration(seconds: 5));
           }
-          var res = await DynamicsHttp.dynamicDetail(id: id, clearCookie: true);
+          final res = await DynamicsHttp.dynamicDetail(
+            id: id,
+            clearCookie: true,
+          );
           final isSuccess = res.isSuccess;
           showDialog(
             context: Get.context!,
@@ -364,7 +366,7 @@ abstract final class RequestUtils {
     int count = like?.count ?? 0;
     bool status = like?.status ?? false;
     int up = status ? 2 : 1;
-    var res = await DynamicsHttp.thumbDynamic(dynamicId: dynamicId, up: up);
+    final res = await DynamicsHttp.thumbDynamic(dynamicId: dynamicId, up: up);
     if (res.isSuccess) {
       SmartDialog.showToast(!status ? '点赞成功' : '取消赞');
       if (up == 1) {
@@ -390,8 +392,10 @@ abstract final class RequestUtils {
     required dynamic mid,
   }) {
     FavHttp.allFavFolders(mid).then((res) {
-      if (context.mounted && res.dataOrNull?.list?.isNotEmpty == true) {
-        final list = res.data.list!;
+      if (!context.mounted) return;
+      if (res case Success(:final response)) {
+        final list = response.list;
+        if (list == null || list.isEmpty) return;
         int? checkedId;
         showDialog(
           context: context,
@@ -552,7 +556,7 @@ abstract final class RequestUtils {
       return;
     }
 
-    var registerData = Gt3RegisterData(
+    final registerData = Gt3RegisterData(
       challenge: challenge,
       gt: gt,
       success: true,
@@ -650,16 +654,15 @@ abstract final class RequestUtils {
 
   static Future<void> showUserRealName(String mid) async {
     final res = await UserHttp.getUserRealName(mid);
-    if (res.isSuccess) {
-      final data = res.data;
-      final show = !data.name.isNullOrEmpty;
+    if (res case Success(:final response)) {
+      final show = !response.name.isNullOrEmpty;
       showDialog(
         context: Get.context!,
         builder: (context) => AlertDialog(
           title: SelectableText(
-            show ? data.name! : data.rejectPage?.title ?? '',
+            show ? response.name! : response.rejectPage?.title ?? '',
           ),
-          content: show ? null : Text(data.rejectPage?.text ?? ''),
+          content: show ? null : Text(response.rejectPage?.text ?? ''),
           actions: [
             TextButton(
               onPressed: Get.back,

@@ -38,7 +38,7 @@ class _WhisperBlockPageState extends State<WhisperBlockPage> {
   ) {
     return switch (loadingState) {
       Loading() => loadingWidget,
-      Success(:var response) =>
+      Success(:final response) =>
         response != null && response.isNotEmpty
             ? Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -69,28 +69,26 @@ class _WhisperBlockPageState extends State<WhisperBlockPage> {
                     ),
                   ),
                   Expanded(
-                    child: Padding(
+                    child: SingleChildScrollView(
                       padding: const EdgeInsets.all(12),
-                      child: SingleChildScrollView(
-                        child: Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
-                          children: response
-                              .map(
-                                (e) => SearchText(
-                                  text: e.keyword,
-                                  onTap: (keyword) {
-                                    showConfirmDialog(
-                                      context: context,
-                                      title: '删除屏蔽词？',
-                                      content: '该屏蔽词将不再生效',
-                                      onConfirm: () => _controller.onRemove(e),
-                                    );
-                                  },
-                                ),
-                              )
-                              .toList(),
-                        ),
+                      child: Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: response
+                            .map(
+                              (e) => SearchText(
+                                text: e.keyword,
+                                onTap: (keyword) {
+                                  showConfirmDialog(
+                                    context: context,
+                                    title: '删除屏蔽词？',
+                                    content: '该屏蔽词将不再生效',
+                                    onConfirm: () => _controller.onRemove(e),
+                                  );
+                                },
+                              ),
+                            )
+                            .toList(),
                       ),
                     ),
                   ),
@@ -141,7 +139,7 @@ class _WhisperBlockPageState extends State<WhisperBlockPage> {
                   ],
                 ),
               ),
-      Error(:var errMsg) => scrollErrorWidget(
+      Error(:final errMsg) => scrollErrorWidget(
         errMsg: errMsg,
         onReload: _controller.onReload,
       ),
