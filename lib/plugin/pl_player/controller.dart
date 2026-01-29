@@ -794,7 +794,7 @@ class PlPlayerController {
         setShader(superResolutionType.value, pp);
       }
       await pp.setProperty("af", "scaletempo2=max-speed=8");
-      await pp.setProperty("sharpen", "0.4");
+      await pp.setProperty("sharpen", "0.3");
       if (Platform.isAndroid) {
         await pp.setProperty("volume-max", "100");
         await pp.setProperty("ao", Pref.audioOutput);
