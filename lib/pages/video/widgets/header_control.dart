@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:convert';
+import 'dart:convert' show jsonDecode, utf8;
 import 'dart:io';
 import 'dart:math';
 
@@ -282,6 +282,7 @@ class HeaderControl extends StatefulWidget {
     if (Accounts.main.isLogin) {
       return autoWrapReportDialog(
         context,
+        ban: false,
         ReportOptions.liveDanmakuReport,
         (reasonType, reasonDesc, banUid) {
           // if (banUid) {
@@ -406,10 +407,9 @@ class HeaderControlState extends State<HeaderControl>
                     dense: true,
                     onTap: () {
                       Get.back();
-                      ImageUtils.downloadImg(
-                        context,
-                        [widget.videoDetailCtr.cover.value],
-                      );
+                      ImageUtils.downloadImg([
+                        widget.videoDetailCtr.cover.value,
+                      ]);
                     },
                     leading: const Icon(Icons.image_outlined, size: 20),
                     title: const Text('保存封面', style: titleStyle),
@@ -536,11 +536,9 @@ class HeaderControlState extends State<HeaderControl>
                       Get.back();
                       final result = await showDialog<CDNService>(
                         context: context,
-                        builder: (context) {
-                          return CdnSelectDialog(
-                            sample: videoInfo.dash?.video?.firstOrNull,
-                          );
-                        },
+                        builder: (context) => CdnSelectDialog(
+                          sample: videoInfo.dash?.video?.firstOrNull,
+                        ),
                       );
                       if (result != null) {
                         VideoUtils.cdnService = result;
@@ -717,34 +715,41 @@ class HeaderControlState extends State<HeaderControl>
                         final first = file.files.first;
                         final path = first.path;
                         if (path != null) {
-                          final file = File(path);
-                          final stream = file.openRead().transform(
-                            utf8.decoder,
-                          );
-                          final buffer = StringBuffer();
-                          await for (final chunk in stream) {
-                            if (!mounted) return;
-                            buffer.write(chunk);
-                          }
-                          if (!mounted) return;
-                          String sub = buffer.toString();
                           final name = first.name;
+                          final length = videoDetailCtr.subtitles.length;
                           if (name.endsWith('.json')) {
+                            final file = File(path);
+                            final stream = file.openRead().transform(
+                              utf8.decoder,
+                            );
+                            final buffer = StringBuffer();
+                            await for (final chunk in stream) {
+                              if (!mounted) return;
+                              buffer.write(chunk);
+                            }
+                            if (!mounted) return;
+                            String sub = buffer.toString();
                             sub = await compute<List, String>(
                               VideoHttp.processList,
                               jsonDecode(sub)['body'],
                             );
                             if (!mounted) return;
+                            videoDetailCtr.vttSubtitles[length] = (
+                              isData: true,
+                              id: sub,
+                            );
+                          } else {
+                            videoDetailCtr.vttSubtitles[length] = (
+                              isData: false,
+                              id: path,
+                            );
                           }
-                          final length = videoDetailCtr.subtitles.length;
-                          videoDetailCtr
-                            ..subtitles.add(
-                              Subtitle(
-                                lan: '',
-                                lanDoc: name.split('.').firstOrNull ?? name,
-                              ),
-                            )
-                            ..vttSubtitles[length] = sub;
+                          videoDetailCtr.subtitles.add(
+                            Subtitle(
+                              lan: '',
+                              lanDoc: name.split('.').firstOrNull ?? name,
+                            ),
+                          );
                           await videoDetailCtr.setSubtitle(length + 1);
                         }
                       }
@@ -1223,68 +1228,66 @@ class HeaderControlState extends State<HeaderControl>
   void onExportSubtitle() {
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          clipBehavior: Clip.hardEdge,
-          contentPadding: const EdgeInsets.fromLTRB(0, 12, 0, 12),
-          title: const Text('保存字幕'),
-          content: SingleChildScrollView(
-            child: Column(
-              children: videoDetailCtr.subtitles
-                  .map(
-                    (item) => ListTile(
-                      dense: true,
-                      onTap: () async {
-                        Get.back();
-                        final url = item.subtitleUrl;
-                        if (url == null || url.isEmpty) return;
-                        try {
-                          final res = await Request.dio.get<Uint8List>(
-                            url.http2https,
-                            options: Options(
-                              responseType: ResponseType.bytes,
-                              headers: Constants.baseHeaders,
-                              extra: {'account': const NoAccount()},
+      builder: (context) => AlertDialog(
+        clipBehavior: Clip.hardEdge,
+        contentPadding: const EdgeInsets.fromLTRB(0, 12, 0, 12),
+        title: const Text('保存字幕'),
+        content: SingleChildScrollView(
+          child: Column(
+            children: videoDetailCtr.subtitles
+                .map(
+                  (item) => ListTile(
+                    dense: true,
+                    onTap: () async {
+                      Get.back();
+                      final url = item.subtitleUrl;
+                      if (url == null || url.isEmpty) return;
+                      try {
+                        final res = await Request.dio.get<Uint8List>(
+                          url.http2https,
+                          options: Options(
+                            responseType: ResponseType.bytes,
+                            headers: Constants.baseHeaders,
+                            extra: {'account': const NoAccount()},
+                          ),
+                        );
+                        if (res.statusCode == 200) {
+                          final bytes = Uint8List.fromList(
+                            Request.responseBytesDecoder(
+                              res.data!,
+                              res.headers.map,
                             ),
                           );
-                          if (res.statusCode == 200) {
-                            final bytes = Uint8List.fromList(
-                              Request.responseBytesDecoder(
-                                res.data!,
-                                res.headers.map,
-                              ),
-                            );
-                            String name =
-                                '${introController.videoDetail.value.title}-${videoDetailCtr.bvid}-${videoDetailCtr.cid.value}-${item.lanDoc}.json';
-                            if (Platform.isWindows) {
-                              // Reserved characters may not be used in file names. See: https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file#naming-conventions
-                              name = name.replaceAll(
-                                RegExp(r'[<>:/\\|?*"]'),
-                                '',
-                              );
-                            }
-                            Utils.saveBytes2File(
-                              name: name,
-                              bytes: bytes,
-                              allowedExtensions: const ['json'],
+                          String name =
+                              '${introController.videoDetail.value.title}-${videoDetailCtr.bvid}-${videoDetailCtr.cid.value}-${item.lanDoc}.json';
+                          if (Platform.isWindows) {
+                            // Reserved characters may not be used in file names. See: https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file#naming-conventions
+                            name = name.replaceAll(
+                              RegExp(r'[<>:/\\|?*"]'),
+                              '',
                             );
                           }
-                        } catch (e, s) {
-                          Utils.reportError(e, s);
-                          SmartDialog.showToast(e.toString());
+                          Utils.saveBytes2File(
+                            name: name,
+                            bytes: bytes,
+                            allowedExtensions: const ['json'],
+                          );
                         }
-                      },
-                      title: Text(
-                        item.lanDoc!,
-                        style: const TextStyle(fontSize: 14),
-                      ),
+                      } catch (e, s) {
+                        Utils.reportError(e, s);
+                        SmartDialog.showToast(e.toString());
+                      }
+                    },
+                    title: Text(
+                      item.lanDoc!,
+                      style: const TextStyle(fontSize: 14),
                     ),
-                  )
-                  .toList(),
-            ),
+                  ),
+                )
+                .toList(),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -1848,11 +1851,13 @@ class HeaderControlState extends State<HeaderControl>
                     color: Colors.white,
                   ),
                   onPressed: () {
-                    if (plPlayerController.isDesktopPip) {
-                      plPlayerController.exitDesktopPip();
-                    } else if (isFullScreen) {
-                      plPlayerController.triggerFullScreen(status: false);
-                    } else if (PlatformUtils.isMobile &&
+                    if (plPlayerController.onPopInvokedWithResult(
+                      false,
+                      null,
+                    )) {
+                      return;
+                    }
+                    if (PlatformUtils.isMobile &&
                         !horizontalScreen &&
                         !isPortrait) {
                       verticalScreenForTwoSeconds();
