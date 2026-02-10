@@ -84,12 +84,14 @@ List<SettingsModel> get extraSettings => [
       ],
     ),
   ),
-  getPopupMenuModel(
+  PopupModel<SkipType>(
     title: '番剧片头/片尾跳过类型',
     leading: const Icon(MdiIcons.debugStepOver),
-    key: SettingBoxKey.pgcSkipType,
-    values: SkipType.values,
-    defaultIndex: SkipType.skipOnce.index,
+    value: () => Pref.pgcSkipType,
+    items: SkipType.values,
+    onSelected: (value, setState) => GStorage.setting
+        .put(SettingBoxKey.pgcSkipType, value.index)
+        .whenComplete(setState),
   ),
   SwitchModel(
     title: '检查未读动态',
@@ -295,7 +297,7 @@ List<SettingsModel> get extraSettings => [
     title: '超分辨率',
     leading: const Icon(Icons.stay_current_landscape_outlined),
     getSubtitle: () =>
-        '当前:「${Pref.superResolutionType.title}」\n默认设置对番剧生效, 其他视频默认关闭\n超分辨率需要启用硬件解码, 若启用硬件解码后仍然不生效, 尝试切换硬件解码器为 auto-copy',
+        '当前:「${Pref.superResolutionType.label}」\n默认设置对番剧生效, 其他视频默认关闭\n超分辨率需要启用硬件解码, 若启用硬件解码后仍然不生效, 尝试切换硬件解码器为 auto-copy',
     onTap: _showSuperResolutionDialog,
   ),
   const SwitchModel(
@@ -700,9 +702,7 @@ Future<void> audioNormalization(
               onPressed: Get.back,
               child: Text(
                 '取消',
-                style: TextStyle(
-                  color: ColorScheme.of(context).outline,
-                ),
+                style: TextStyle(color: ColorScheme.of(context).outline),
               ),
             ),
             TextButton(
@@ -798,9 +798,7 @@ void _showDynDialog(BuildContext context) {
           onPressed: Get.back,
           child: Text(
             '取消',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.outline,
-            ),
+            style: TextStyle(color: ColorScheme.of(context).outline),
           ),
         ),
         TextButton(
@@ -840,21 +838,20 @@ void _showReplyLengthDialog(BuildContext context, VoidCallback setState) {
           onPressed: Get.back,
           child: Text(
             '取消',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.outline,
-            ),
+            style: TextStyle(color: ColorScheme.of(context).outline),
           ),
         ),
         TextButton(
           onPressed: () async {
-            Get.back();
-            int length = int.tryParse(replyLengthLimit) ?? 6;
-            ReplyItemGrpc.replyLengthLimit = length == 0 ? null : length;
-            await GStorage.setting.put(
-              SettingBoxKey.replyLengthLimit,
-              length,
-            );
-            setState();
+            try {
+              final val = int.parse(replyLengthLimit);
+              Get.back();
+              ReplyItemGrpc.replyLengthLimit = val == 0 ? null : val;
+              await GStorage.setting.put(SettingBoxKey.replyLengthLimit, val);
+              setState();
+            } catch (e) {
+              SmartDialog.showToast(e.toString());
+            }
           },
           child: const Text('确定'),
         ),
@@ -883,22 +880,22 @@ void _showDmHeightDialog(BuildContext context, VoidCallback setState) {
           onPressed: Get.back,
           child: Text(
             '取消',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.outline,
-            ),
+            style: TextStyle(color: ColorScheme.of(context).outline),
           ),
         ),
         TextButton(
           onPressed: () async {
-            Get.back();
-            await GStorage.setting.put(
-              SettingBoxKey.danmakuLineHeight,
-              max(
+            try {
+              final val = max(
                 1.0,
-                double.tryParse(danmakuLineHeight)?.toPrecision(1) ?? 1.6,
-              ),
-            );
-            setState();
+                double.parse(danmakuLineHeight).toPrecision(1),
+              );
+              Get.back();
+              await GStorage.setting.put(SettingBoxKey.danmakuLineHeight, val);
+              setState();
+            } catch (e) {
+              SmartDialog.showToast(e.toString());
+            }
           },
           child: const Text('确定'),
         ),
@@ -927,9 +924,7 @@ void _showTouchSlopDialog(BuildContext context, VoidCallback setState) {
           onPressed: Get.back,
           child: Text(
             '取消',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.outline,
-            ),
+            style: TextStyle(color: ColorScheme.of(context).outline),
           ),
         ),
         TextButton(
@@ -971,7 +966,6 @@ Future<void> _showRefreshDragDialog(
     kDragContainerExtentPercentage = res;
     await GStorage.setting.put(SettingBoxKey.refreshDragPercentage, res);
     Get.forceAppUpdate();
-    setState();
   }
 }
 
@@ -993,7 +987,6 @@ Future<void> _showRefreshDialog(
     displacement = res;
     await GStorage.setting.put(SettingBoxKey.refreshDisplacement, res);
     Get.forceAppUpdate();
-    setState();
   }
 }
 
@@ -1006,7 +999,7 @@ Future<void> _showSuperResolutionDialog(
     builder: (context) => SelectDialog<SuperResolutionType>(
       title: '超分辨率',
       value: Pref.superResolutionType,
-      values: SuperResolutionType.values.map((e) => (e, e.title)).toList(),
+      values: SuperResolutionType.values.map((e) => (e, e.label)).toList(),
     ),
   );
   if (res != null) {
@@ -1210,9 +1203,7 @@ void _showProxyDialog(BuildContext context) {
           onPressed: Get.back,
           child: Text(
             '取消',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.outline,
-            ),
+            style: TextStyle(color: ColorScheme.of(context).outline),
           ),
         ),
         TextButton(
@@ -1254,20 +1245,22 @@ void _showCacheDialog(BuildContext context, VoidCallback setState) {
           onPressed: Get.back,
           child: Text(
             '取消',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.outline,
-            ),
+            style: TextStyle(color: ColorScheme.of(context).outline),
           ),
         ),
         TextButton(
           onPressed: () async {
-            Get.back();
-            num value = num.tryParse(valueStr) ?? 0;
-            await GStorage.setting.put(
-              SettingBoxKey.maxCacheSize,
-              value * 1024 * 1024,
-            );
-            setState();
+            try {
+              final val = num.parse(valueStr);
+              Get.back();
+              await GStorage.setting.put(
+                SettingBoxKey.maxCacheSize,
+                val * 1024 * 1024,
+              );
+              setState();
+            } catch (e) {
+              SmartDialog.showToast(e.toString());
+            }
           },
           child: const Text('确定'),
         ),

@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'dart:math';
+import 'dart:math' as math;
 
 import 'package:PiliPlus/common/widgets/color_palette.dart';
 import 'package:PiliPlus/common/widgets/custom_toast.dart';
@@ -83,9 +83,7 @@ List<SettingsModel> get styleSettings => [
     setKey: SettingBoxKey.appFontWeight,
     defaultVal: false,
     leading: const Icon(Icons.text_fields),
-    onChanged: (value) {
-      Get.forceAppUpdate();
-    },
+    onChanged: (value) => Get.forceAppUpdate(),
     onTap: _showFontWeightDialog,
   ),
   NormalModel(
@@ -357,9 +355,7 @@ List<SettingsModel> get styleSettings => [
     leading: const Icon(Icons.exit_to_app_outlined),
     setKey: SettingBoxKey.directExitOnBack,
     defaultVal: false,
-    onChanged: (value) {
-      Get.find<MainController>().directExitOnBack = value;
-    },
+    onChanged: (value) => Get.find<MainController>().directExitOnBack = value,
   ),
   if (Platform.isAndroid)
     NormalModel(
@@ -465,7 +461,7 @@ void _showUiScaleDialog(
             GStorage.setting.delete(SettingBoxKey.uiScale).whenComplete(() {
               setState();
               Get.appUpdate();
-              ScaledWidgetsFlutterBinding.instance.setScaleFactor(1.0);
+              ScaledWidgetsFlutterBinding.instance.scaleFactor = 1.0;
             });
           },
           child: const Text('重置'),
@@ -474,9 +470,7 @@ void _showUiScaleDialog(
           onPressed: () => Navigator.pop(context),
           child: Text(
             '取消',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.outline,
-            ),
+            style: TextStyle(color: ColorScheme.of(context).outline),
           ),
         ),
         TextButton(
@@ -486,59 +480,9 @@ void _showUiScaleDialog(
               () {
                 setState();
                 Get.appUpdate();
-                ScaledWidgetsFlutterBinding.instance.setScaleFactor(uiScale);
+                ScaledWidgetsFlutterBinding.instance.scaleFactor = uiScale;
               },
             );
-          },
-          child: const Text('确定'),
-        ),
-      ],
-    ),
-  );
-}
-
-void _showSpringDurationDialog(BuildContext context) {
-  String initialValue = '500';
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('滑动时间'),
-      content: TextFormField(
-        autofocus: true,
-        keyboardType: .number,
-        initialValue: initialValue,
-        onChanged: (value) => initialValue = value,
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        decoration: const InputDecoration(suffixText: 'ms'),
-      ),
-      actions: [
-        TextButton(
-          onPressed: Get.back,
-          child: Text(
-            '取消',
-            style: TextStyle(color: Theme.of(context).colorScheme.outline),
-          ),
-        ),
-        TextButton(
-          onPressed: () {
-            try {
-              final milliseconds = int.parse(initialValue);
-              Get.back();
-              final springDescription = SpringDescription.withDurationAndBounce(
-                duration: Duration(milliseconds: milliseconds),
-              );
-              GStorage.setting.put(
-                SettingBoxKey.springDescription,
-                [
-                  springDescription.mass,
-                  springDescription.stiffness,
-                  springDescription.damping,
-                ],
-              );
-              SmartDialog.showToast('设置成功，重启生效');
-            } catch (e) {
-              SmartDialog.showToast(e.toString());
-            }
           },
           child: const Text('确定'),
         ),
@@ -550,7 +494,38 @@ void _showSpringDurationDialog(BuildContext context) {
 void _showSpringDialog(BuildContext context, _) {
   final List<String> springDescription = Pref.springDescription
       .map((i) => i.toString())
-      .toList();
+      .toList(growable: false);
+  bool physicalMode = true;
+
+  void physical2Duration() {
+    final mass = double.parse(springDescription[0]);
+    final stiffness = double.parse(springDescription[1]);
+    final damping = double.parse(springDescription[2]);
+
+    final duration = math.sqrt(4 * math.pi * math.pi * mass / stiffness);
+    final dampingRatio = damping / (2.0 * math.sqrt(mass * stiffness));
+    final bounce = dampingRatio < 1.0
+        ? 1.0 - dampingRatio
+        : 1.0 / dampingRatio - 1;
+
+    springDescription[0] = duration.toString();
+    springDescription[1] = bounce.toString();
+  }
+
+  /// from [SpringDescription.withDurationAndBounce] but with higher precision
+  void duration2Physical() {
+    final duration = double.parse(springDescription[0]);
+    final bounce = double.parse(springDescription[1]).clamp(-1.0, 1.0);
+
+    final stiffness = 4 * math.pi * math.pi / math.pow(duration, 2);
+    final dampingRatio = bounce > 0 ? 1.0 - bounce : 1.0 / (bounce + 1);
+    final damping = 2 * math.sqrt(stiffness) * dampingRatio;
+
+    springDescription[0] = '1';
+    springDescription[1] = stiffness.toString();
+    springDescription[2] = damping.toString();
+  }
+
   showDialog(
     context: context,
     builder: (context) => AlertDialog(
@@ -564,27 +539,45 @@ void _showSpringDialog(BuildContext context, _) {
               tapTargetSize: .shrinkWrap,
             ),
             onPressed: () {
-              Get.back();
-              _showSpringDurationDialog(context);
+              try {
+                if (physicalMode) {
+                  physical2Duration();
+                } else {
+                  duration2Physical();
+                }
+                physicalMode = !physicalMode;
+                (context as Element).markNeedsBuild();
+              } catch (e) {
+                SmartDialog.showToast(e.toString());
+              }
             },
-            child: const Text('滑动时间'),
+            child: Text(physicalMode ? '滑动时间' : '物理参数'),
           ),
         ],
       ),
       content: Column(
-        mainAxisSize: MainAxisSize.min,
+        key: ValueKey(physicalMode),
+        mainAxisSize: .min,
         children: List.generate(
-          3,
+          physicalMode ? 3 : 2,
           (index) => TextFormField(
             autofocus: index == 0,
             initialValue: springDescription[index],
-            keyboardType: const .numberWithOptions(decimal: true),
+            keyboardType: .numberWithOptions(
+              signed: !physicalMode && index == 1,
+              decimal: true,
+            ),
             onChanged: (value) => springDescription[index] = value,
             inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[\d\.]+')),
+              !physicalMode && index == 1
+                  ? FilteringTextInputFormatter.allow(RegExp(r'[-\d\.]+'))
+                  : FilteringTextInputFormatter.allow(RegExp(r'[\d\.]+')),
             ],
             decoration: InputDecoration(
-              labelText: const ['mass', 'stiffness', 'damping'][index],
+              labelText: (physicalMode
+                  ? const ['mass', 'stiffness', 'damping']
+                  : const ['duration', 'bounce'])[index],
+              suffixText: !physicalMode && index == 0 ? 's' : null,
             ),
           ),
         ),
@@ -602,12 +595,15 @@ void _showSpringDialog(BuildContext context, _) {
           onPressed: Get.back,
           child: Text(
             '取消',
-            style: TextStyle(color: Theme.of(context).colorScheme.outline),
+            style: TextStyle(color: ColorScheme.of(context).outline),
           ),
         ),
         TextButton(
           onPressed: () {
             try {
+              if (!physicalMode) {
+                duration2Physical();
+              }
               final res = springDescription.map(double.parse).toList();
               Get.back();
               GStorage.setting.put(SettingBoxKey.springDescription, res);
@@ -794,12 +790,8 @@ void _showScrollDialog(BuildContext context) {
       content: TextFormField(
         autofocus: true,
         initialValue: scrollThreshold,
-        keyboardType: const TextInputType.numberWithOptions(
-          decimal: true,
-        ),
-        onChanged: (value) {
-          scrollThreshold = value;
-        },
+        keyboardType: const .numberWithOptions(decimal: true),
+        onChanged: (value) => scrollThreshold = value,
         inputFormatters: [
           FilteringTextInputFormatter.allow(RegExp(r'[\d\.]+')),
         ],
@@ -810,22 +802,19 @@ void _showScrollDialog(BuildContext context) {
           onPressed: Get.back,
           child: Text(
             '取消',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.outline,
-            ),
+            style: TextStyle(color: ColorScheme.of(context).outline),
           ),
         ),
         TextButton(
           onPressed: () {
-            Get.back();
-            GStorage.setting.put(
-              SettingBoxKey.scrollThreshold,
-              max(
-                10.0,
-                double.tryParse(scrollThreshold) ?? 50.0,
-              ),
-            );
-            SmartDialog.showToast('重启生效');
+            try {
+              final val = double.parse(scrollThreshold);
+              Get.back();
+              GStorage.setting.put(SettingBoxKey.scrollThreshold, val);
+              SmartDialog.showToast('重启生效');
+            } catch (e) {
+              SmartDialog.showToast(e.toString());
+            }
           },
           child: const Text('确定'),
         ),

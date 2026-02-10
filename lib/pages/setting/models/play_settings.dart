@@ -8,6 +8,7 @@ import 'package:PiliPlus/pages/setting/models/model.dart';
 import 'package:PiliPlus/pages/setting/widgets/select_dialog.dart';
 import 'package:PiliPlus/plugin/pl_player/models/bottom_progress_behavior.dart';
 import 'package:PiliPlus/plugin/pl_player/models/fullscreen_mode.dart';
+import 'package:PiliPlus/plugin/pl_player/models/play_repeat.dart';
 import 'package:PiliPlus/plugin/pl_player/utils/fullscreen.dart'
     show allowRotateScreen;
 import 'package:PiliPlus/services/service_locator.dart';
@@ -249,10 +250,18 @@ List<SettingsModel> get playSettings => [
       leading: const Icon(Icons.volume_up_outlined),
       setKey: SettingBoxKey.enableBackgroundPlay,
       defaultVal: true,
-      onChanged: (value) {
-        videoPlayerServiceHandler!.enableBackgroundPlay = value;
-      },
+      onChanged: (value) =>
+          videoPlayerServiceHandler!.enableBackgroundPlay = value,
     ),
+  PopupModel(
+    title: '播放顺序',
+    leading: const Icon(Icons.repeat),
+    value: () => Pref.playRepeat,
+    items: PlayRepeat.values,
+    onSelected: (value, setState) => GStorage.video
+        .put(VideoBoxKey.playRepeat, value.index)
+        .whenComplete(setState),
+  ),
   const SwitchModel(
     title: '播放器设置仅对当前生效',
     subtitle: '弹幕、字幕及部分设置中没有的设置除外',

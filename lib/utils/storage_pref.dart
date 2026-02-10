@@ -39,6 +39,7 @@ import 'package:PiliPlus/utils/storage_key.dart';
 import 'package:PiliPlus/utils/utils.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flex_seed_scheme/flex_seed_scheme.dart' show FlexSchemeVariant;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
@@ -252,6 +253,11 @@ abstract final class Pref {
   static String get videoSync =>
       _setting.get(SettingBoxKey.videoSync, defaultValue: 'display-resample');
 
+  static String get autosync => _setting.get(
+    SettingBoxKey.autosync,
+    defaultValue: Platform.isAndroid ? '30' : '0',
+  );
+
   static CDNService get defaultCDNService {
     if (_setting.get(SettingBoxKey.CDNService) case final String cdnName) {
       return CDNService.values.byName(cdnName);
@@ -319,7 +325,7 @@ abstract final class Pref {
   );
 
   static bool get blockTrack =>
-      _setting.get(SettingBoxKey.blockTrack, defaultValue: true);
+      _setting.get(SettingBoxKey.blockTrack, defaultValue: !kDebugMode);
 
   static bool get checkDynamic =>
       _setting.get(SettingBoxKey.checkDynamic, defaultValue: true);
@@ -456,7 +462,7 @@ abstract final class Pref {
     SuperResolutionType? superResolutionType;
     final index = _setting.get(SettingBoxKey.superResolutionType);
     if (index != null) {
-      superResolutionType = SuperResolutionType.values.getOrNull(index);
+      superResolutionType = SuperResolutionType.values.elementAtOrNull(index);
     }
     return superResolutionType ?? SuperResolutionType.disable;
   }
