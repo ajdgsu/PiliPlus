@@ -1327,7 +1327,10 @@ class PlPlayerController with BlockConfigMixin {
       volumeIndicator.value = false;
       volumeInterceptEventStream.value = false;
       if (PlatformUtils.isDesktop) {
-        setting.put(SettingBoxKey.desktopVolume, volume.toPrecision(3));
+        setting.put(
+          SettingBoxKey.desktopVolume,
+          double.parse(volume.toStringAsFixed(3)),
+        );
       }
     });
   }
