@@ -779,18 +779,18 @@ class PlPlayerController with BlockConfigMixin {
         return;
       }
 
-      final pp = player.platform!;
+      final pp = player;
       if (!isAnim) {
         setShader(superResolutionType.value, pp);
       }
-      await pp.setProperty("sharpen", "0.3");
-      await pp.setProperty("gpu-api", "vulkan");
+      pp.setProperty("sharpen", "0.3");
+      pp.setProperty("gpu-api", "vulkan");
       await player.setAudioTrack(AudioTrack.auto());
       if (Pref.enableSystemProxy) {
         final systemProxyHost = Pref.systemProxyHost;
         final systemProxyPort = int.tryParse(Pref.systemProxyPort);
         if (systemProxyPort != null && systemProxyHost.isNotEmpty) {
-          await pp.setProperty(
+          pp.setProperty(
             "http-proxy",
             'http://$systemProxyHost:$systemProxyPort',
           );
