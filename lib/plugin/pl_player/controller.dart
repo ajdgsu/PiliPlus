@@ -787,7 +787,6 @@ class PlPlayerController with BlockConfigMixin {
         setShader(superResolutionType.value, pp);
       }
       pp.setProperty("sharpen", "0.3");
-      pp.setProperty("gpu-api", "vulkan");
       await player.setAudioTrack(AudioTrack.auto());
       if (Pref.enableSystemProxy) {
         final systemProxyHost = Pref.systemProxyHost;
