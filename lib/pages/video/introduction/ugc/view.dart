@@ -598,9 +598,9 @@ class _UgcIntroPanelState extends State<UgcIntroPanel> {
           Obx(
             () => ActionItem(
               // 无痕模式
-              icon: const Icon(MdiIcons.incognito),
-              selectIcon: const Icon(MdiIcons.incognitoOff),
-              onTap: () => MineController.anonymity.toggle(),
+              icon: const Icon(MdiIcons.incognitoOff),
+              selectIcon: const Icon(MdiIcons.incognito),
+              onTap: MineController.onChangeAnonymitySilently,
               selectStatus: MineController.anonymity.value,
               semanticsLabel: '无痕模式',
               text: '无痕模式',

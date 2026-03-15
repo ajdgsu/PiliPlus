@@ -1,3 +1,5 @@
+import 'dart:async' show unawaited;
+
 import 'package:PiliPlus/http/fav.dart';
 import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/http/user.dart';
@@ -148,12 +150,40 @@ class MineController extends CommonDataController<FavFolderData, FavFolderData>
     );
   }
 
+  static Future<void> _setAnonymity(
+    bool enabled, {
+    bool persist = false,
+  }) async {
+    anonymity.value = enabled;
+    if (enabled) {
+      if (persist) {
+        await Accounts.set(AccountType.heartbeat, AnonymousAccount());
+      } else {
+        Accounts.accountMode[AccountType.heartbeat.index] = AnonymousAccount();
+      }
+      return;
+    }
+    await Accounts.set(AccountType.heartbeat, Accounts.main);
+  }
+
   static void onChangeAnonymity() {
+    unawaited(_changeAnonymity(showDialog: true));
+  }
+
+  static void onChangeAnonymitySilently() {
+    unawaited(_changeAnonymity(showDialog: false));
+  }
+
+  static Future<void> _changeAnonymity({required bool showDialog}) async {
     if (Accounts.account.isEmpty) {
       SmartDialog.showToast('请先登录');
       return;
     }
     final newVal = !anonymity.value;
+    if (!showDialog) {
+      await _setAnonymity(newVal);
+      return;
+    }
     anonymity.value = newVal;
     if (newVal) {
       SmartDialog.dismiss();
@@ -220,17 +250,14 @@ class MineController extends CommonDataController<FavFolderData, FavFolderData>
             ),
           );
         },
-      ).then((res) {
+      ).then((res) async {
         if (res == false) {
           return;
         }
-        res == true
-            ? Accounts.set(AccountType.heartbeat, AnonymousAccount())
-            : Accounts.accountMode[AccountType.heartbeat.index] =
-                  AnonymousAccount();
+        await _setAnonymity(true, persist: res == true);
       });
     } else {
-      Accounts.set(AccountType.heartbeat, Accounts.main);
+      await _setAnonymity(false);
       SmartDialog.dismiss(result: false);
       SmartDialog.show(
         clickMaskDismiss: false,
