@@ -71,7 +71,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:flutter_volume_controller/flutter_volume_controller.dart';
 import 'package:get/get.dart';
-import 'package:hive/hive.dart';
+import 'package:hive_ce/hive.dart';
 import 'package:media_kit/media_kit.dart' hide Subtitle;
 import 'package:path/path.dart' as path;
 
@@ -635,7 +635,6 @@ class VideoDetailController extends GetxController
     _autoPlay.value = true;
     playedTime = plPlayerController.position;
     plPlayerController
-      ..removeListeners()
       ..isBuffering.value = false
       ..buffered.value = Duration.zero;
 
@@ -658,13 +657,15 @@ class VideoDetailController extends GetxController
     playerInit();
   }
 
-  Future<void>? _initPlayerIfNeeded() {
+  Future<void>? _initPlayerIfNeeded(bool autoFullScreenFlag) {
     if (_autoPlay.value ||
         (plPlayerController.preInitPlayer && !plPlayerController.processing) &&
             (isFileSource
                 ? true
                 : videoPlayerKey.currentState?.mounted == true)) {
-      return playerInit();
+      return playerInit(
+        autoFullScreenFlag: autoFullScreenFlag && _autoPlay.value,
+      );
     }
     return null;
   }
@@ -676,6 +677,7 @@ class VideoDetailController extends GetxController
     Duration? duration,
     bool? autoplay,
     Volume? volume,
+    bool autoFullScreenFlag = false,
   }) async {
     Duration? seek = seekToTime ?? defaultST ?? playedTime;
     if (seek == null || seek == Duration.zero) {
@@ -687,6 +689,7 @@ class VideoDetailController extends GetxController
               dir: args['dirPath'],
               typeTag: entry.typeTag!,
               isMp4: entry.mediaType == 1,
+              hasDashAudio: entry.hasDashAudio,
             )
           : NetworkSource(
               videoSource: video ?? videoUrl!,
@@ -716,6 +719,7 @@ class VideoDetailController extends GetxController
       width: firstVideo.width,
       height: firstVideo.height,
       volume: volume ?? this.volume,
+      autoFullScreenFlag: autoFullScreenFlag,
     );
 
     if (isClosed) return;
@@ -757,9 +761,10 @@ class VideoDetailController extends GetxController
   Future<void> queryVideoUrl({
     Duration? defaultST,
     bool fromReset = false,
+    bool autoFullScreenFlag = false,
   }) async {
     if (isFileSource) {
-      return _initPlayerIfNeeded();
+      return _initPlayerIfNeeded(autoFullScreenFlag);
     }
     if (isQuerying) {
       return;
@@ -833,7 +838,7 @@ class VideoDetailController extends GetxController
         setVideoHeight();
         currentDecodeFormats = VideoDecodeFormatType.fromString('avc1');
         currentVideoQa.value = videoQuality;
-        await _initPlayerIfNeeded();
+        await _initPlayerIfNeeded(autoFullScreenFlag);
         isQuerying = false;
         return;
       }
@@ -932,7 +937,7 @@ class VideoDetailController extends GetxController
       } else {
         audioUrl = '';
       }
-      await _initPlayerIfNeeded();
+      await _initPlayerIfNeeded(autoFullScreenFlag);
     } else {
       _autoPlay.value = false;
       videoState.value = result..toast();
