@@ -147,3 +147,4 @@ pili_release.json
 dist
 
 test*.dart
+.vscode/settings.json
