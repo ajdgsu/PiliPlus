@@ -11,6 +11,8 @@ final class DiagonalRenderPlan {
     required this.underscanScale,
     required this.overscanScale,
     required this.scale,
+    required this.maxInterfaceScale,
+    required this.interfaceScale,
   });
 
   final Size viewportSize;
@@ -20,6 +22,8 @@ final class DiagonalRenderPlan {
   final double underscanScale;
   final double overscanScale;
   final double scale;
+  final double maxInterfaceScale;
+  final double interfaceScale;
 
   double get baseAngleDegrees => baseAngleRadians * 180 / math.pi;
 }
@@ -121,6 +125,12 @@ final class DiagonalRenderGeometry {
     );
     final direction = clockwise ? 1.0 : -1.0;
     final rotation = direction * baseAngle + angleOffsetDegrees * math.pi / 180;
+    final maxInterfaceScale = _maxScaleForRotatedSize(
+      viewportSize: viewportSize,
+      contentSize: viewportSize,
+      rotationRadians: rotation,
+    );
+    final interfaceScale = math.min(scale, maxInterfaceScale);
 
     return DiagonalRenderPlan(
       viewportSize: viewportSize,
@@ -130,6 +140,8 @@ final class DiagonalRenderGeometry {
       underscanScale: underscanScale,
       overscanScale: overscanScale,
       scale: scale,
+      maxInterfaceScale: maxInterfaceScale,
+      interfaceScale: interfaceScale,
     );
   }
 
@@ -183,6 +195,23 @@ final class DiagonalRenderGeometry {
             ? Size(viewportSize.height * aspectRatio, viewportSize.height)
             : Size(viewportSize.width, viewportSize.width / aspectRatio),
     };
+  }
+
+  static double _maxScaleForRotatedSize({
+    required Size viewportSize,
+    required Size contentSize,
+    required double rotationRadians,
+  }) {
+    final cosTheta = math.cos(rotationRadians).abs();
+    final sinTheta = math.sin(rotationRadians).abs();
+    final rotatedContentWidth =
+        contentSize.width * cosTheta + contentSize.height * sinTheta;
+    final rotatedContentHeight =
+        contentSize.width * sinTheta + contentSize.height * cosTheta;
+    return math.min(
+      viewportSize.width / rotatedContentWidth,
+      viewportSize.height / rotatedContentHeight,
+    );
   }
 
   static bool _isValidSize(Size size) {

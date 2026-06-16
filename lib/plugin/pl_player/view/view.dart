@@ -80,6 +80,7 @@ import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:flutter_volume_controller/flutter_volume_controller.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
+import 'package:hive_ce/hive.dart' show BoxEvent;
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:screen_brightness_platform_interface/screen_brightness_platform_interface.dart';
@@ -154,6 +155,15 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
   bool _pauseDueToPauseUponEnteringBackgroundMode = false;
 
   StreamSubscription? _brightnessListener;
+  StreamSubscription<BoxEvent>? _diagonalRenderSettingsListener;
+
+  static const Set<String> _diagonalRenderSettingKeys = {
+    SettingBoxKey.enableDiagonalRender,
+    SettingBoxKey.diagonalRenderClockwise,
+    SettingBoxKey.diagonalRenderAngleOffset,
+    SettingBoxKey.diagonalRenderScale,
+  };
+
   void _onBrightnessChanged(double value) {
     if (mounted && _gestureType != .left) {
       _brightnessValue.value = value;
@@ -279,6 +289,11 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
           }
         },
       );
+      _diagonalRenderSettingsListener = GStorage.setting.watch().listen((event) {
+        if (mounted && _diagonalRenderSettingKeys.contains(event.key)) {
+          setState(() {});
+        }
+      });
     }
 
     if (PlatformUtils.isMobile) {
@@ -403,6 +418,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
     _brightnessListener?.cancel();
     _controlsListener?.cancel();
     _videoSizeListener?.cancel();
+    _diagonalRenderSettingsListener?.cancel();
     _animationController.dispose();
     _transformationController.dispose();
     _removeDmAction();
@@ -1392,15 +1408,39 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
       fontSize: 12,
     );
     final isLive = plPlayerController.isLive;
+    final diagonalRenderPlan = _resolveDiagonalRenderPlan();
 
     final child = Stack(
       fit: StackFit.passthrough,
       key: _playerKey,
       children: <Widget>[
-        _videoWidget,
+        Positioned.fill(child: ColoredBox(color: widget.fill)),
+
+        Positioned.fill(
+          child: _applyDiagonalRenderLayer(
+            _videoWidget,
+            diagonalRenderPlan,
+            scale: diagonalRenderPlan?.scale,
+          ),
+        ),
 
         if (widget.danmuWidget case final danmaku?)
-          Positioned.fill(top: 4, child: danmaku),
+          Positioned.fill(
+            child: _applyDiagonalRenderLayer(
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: danmaku,
+              ),
+              diagonalRenderPlan,
+              scale: diagonalRenderPlan?.scale,
+            ),
+          ),
+
+        Positioned.fill(
+          child: _applyDiagonalRenderLayer(
+            Stack(
+              fit: StackFit.passthrough,
+              children: <Widget>[
 
         if (!isLive)
           Positioned.fill(
@@ -2043,9 +2083,14 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
                   )
                 : const SizedBox.shrink();
           }),
+              ],
+            ),
+            diagonalRenderPlan,
+            scale: diagonalRenderPlan?.interfaceScale,
+          ),
+        ),
       ],
     );
-    final transformedChild = _applyDiagonalRender(child);
     if (PlatformUtils.isDesktop) {
       return Obx(
         () => MouseRegion(
@@ -2056,26 +2101,26 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
           onHover: (_) => plPlayerController.controls = true,
           onExit: (_) => plPlayerController.controls =
               widget.videoDetailController?.showSteinEdgeInfo.value ?? false,
-          child: transformedChild,
+          child: child,
         ),
       );
     }
-    return transformedChild;
+    return child;
   }
 
-  Widget _applyDiagonalRender(Widget child) {
+  DiagonalRenderPlan? _resolveDiagonalRenderPlan() {
     if (!Platform.isAndroid ||
         !isFullScreen ||
         !Pref.enableDiagonalRender ||
         maxWidth <= 0 ||
         maxHeight <= 0) {
-      return child;
+      return null;
     }
 
     final videoFit = plPlayerController.videoFit.value;
     final videoAspectRatio = _diagonalRenderVideoAspectRatio(videoFit);
     if (videoAspectRatio == null) {
-      return child;
+      return null;
     }
 
     final geometry =
@@ -2083,7 +2128,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
         DiagonalRenderGeometryCache.resolveForSize(
           ui.Size(maxWidth, maxHeight),
         );
-    final plan = geometry.planFor(
+    return geometry.planFor(
       viewportSize: ui.Size(maxWidth, maxHeight),
       videoAspectRatio: videoAspectRatio,
       fit: videoFit.boxFit,
@@ -2092,20 +2137,25 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
       angleOffsetDegrees: Pref.diagonalRenderAngleOffset,
       scaleSliderValue: Pref.diagonalRenderScale,
     );
+  }
+
+  Widget _applyDiagonalRenderLayer(
+    Widget child,
+    DiagonalRenderPlan? plan, {
+    double? scale,
+  }) {
     if (plan == null) {
       return child;
     }
 
+    final layerScale = scale ?? plan.scale;
     return ClipRect(
-      child: ColoredBox(
-        color: widget.fill,
-        child: Transform(
-          alignment: Alignment.center,
-          transform: Matrix4.identity()
-            ..scaleByDouble(plan.scale, plan.scale, plan.scale, 1)
-            ..rotateZ(plan.rotationRadians),
-          child: child,
-        ),
+      child: Transform(
+        alignment: Alignment.center,
+        transform: Matrix4.identity()
+          ..scaleByDouble(layerScale, layerScale, layerScale, 1)
+          ..rotateZ(plan.rotationRadians),
+        child: child,
       ),
     );
   }

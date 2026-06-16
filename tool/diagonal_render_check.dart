@@ -81,6 +81,41 @@ void main() {
     );
   });
 
+  test('caps interface scale so the rotated UI stays inside the viewport', () {
+    final geometry = DiagonalRenderGeometryCache.resolveForSize(
+      const Size(2248, 2480),
+    );
+    final plan = geometry.planFor(
+      viewportSize: const Size(2480, 2248),
+      videoAspectRatio: 16 / 9,
+      fit: BoxFit.contain,
+      clockwise: true,
+      angleOffsetDegrees: 0,
+      scaleSliderValue: 50,
+    )!;
+
+    expect(plan.scale, greaterThan(plan.maxInterfaceScale));
+    expect(plan.interfaceScale, plan.maxInterfaceScale);
+    expect(plan.maxInterfaceScale, closeTo(0.6748, 0.0001));
+  });
+
+  test('keeps interface scale aligned with video when it is already safe', () {
+    final geometry = DiagonalRenderGeometryCache.resolveForSize(
+      const Size(2248, 2480),
+    );
+    final plan = geometry.planFor(
+      viewportSize: const Size(2480, 2248),
+      videoAspectRatio: 16 / 9,
+      fit: BoxFit.cover,
+      clockwise: true,
+      angleOffsetDegrees: 0,
+      scaleSliderValue: 0,
+    )!;
+
+    expect(plan.scale, lessThan(plan.maxInterfaceScale));
+    expect(plan.interfaceScale, plan.scale);
+  });
+
   test('angle offset changes rotation but not scale', () {
     final geometry = DiagonalRenderGeometryCache.resolveForSize(
       const Size(2248, 2480),
@@ -104,6 +139,7 @@ void main() {
     )!;
 
     expect(offsetPlan.scale, basePlan.scale);
+    expect(offsetPlan.maxInterfaceScale, isNot(basePlan.maxInterfaceScale));
     expect(
       offsetPlan.rotationRadians - basePlan.rotationRadians,
       closeTo(10 * 3.141592653589793 / 180, 1e-12),
