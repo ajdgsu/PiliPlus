@@ -80,9 +80,6 @@ android {
         }
     }
 }
-dependencies {
-    implementation(project(":flutter_native_splash"))
-}
 
 kotlin {
     compilerOptions {
