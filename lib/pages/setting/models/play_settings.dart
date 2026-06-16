@@ -44,13 +44,40 @@ List<SettingsModel> get playSettings => [
     title: '倍速设置',
     subtitle: '设置视频播放速度',
   ),
-  if (Platform.isAndroid)
+  if (Platform.isAndroid) ...[
     NormalModel(
       onTap: _showAngleDegreesDialog,
       leading: const Icon(MdiIcons.angleAcute),
       title: '倾斜角度阈值',
       getSubtitle: () => '当前:「${Pref.angleDegrees}°」',
     ),
+    const SwitchModel(
+      title: '对角线渲染模式',
+      subtitle: '全屏时整体旋转播放器画布，适配折叠屏方形内屏',
+      leading: Icon(Icons.screen_rotation_alt_outlined),
+      setKey: SettingBoxKey.enableDiagonalRender,
+      defaultVal: false,
+    ),
+    NormalModel(
+      onTap: _showDiagonalRenderDirectionDialog,
+      leading: const Icon(Icons.rotate_90_degrees_cw_outlined),
+      title: '对角线方向',
+      getSubtitle: () => '当前:「${_diagonalRenderDirectionText()}」',
+    ),
+    NormalModel(
+      onTap: _showDiagonalRenderAngleOffsetDialog,
+      leading: const Icon(MdiIcons.angleAcute),
+      title: '倾斜角度偏移',
+      getSubtitle: () =>
+          '当前:「${_formatSignedDegrees(Pref.diagonalRenderAngleOffset)}」',
+    ),
+    NormalModel(
+      onTap: _showDiagonalRenderScaleDialog,
+      leading: const Icon(Icons.zoom_out_map_outlined),
+      title: '视频缩放倍率',
+      getSubtitle: () => '当前:「${_formatDiagonalRenderScale()}」',
+    ),
+  ],
   const SwitchModel(
     title: '自动播放',
     subtitle: '进入详情页自动播放',
@@ -388,6 +415,83 @@ Future<void> _showAngleDegreesDialog(
   );
   if (res != null) {
     await GStorage.setting.put(SettingBoxKey.angleDegrees, res.toInt());
+    setState();
+  }
+}
+
+String _diagonalRenderDirectionText() {
+  return Pref.diagonalRenderClockwise ? '顺时针' : '逆时针';
+}
+
+String _formatSignedDegrees(double value) {
+  final sign = value > 0 ? '+' : '';
+  return '$sign${value.toStringAsFixed(1)}°';
+}
+
+String _formatDiagonalRenderScale() {
+  final value = Pref.diagonalRenderScale;
+  if (value == 0) return '不裁剪模式';
+  if (value == 100) return '无黑边模式';
+  return value.toStringAsFixed(0);
+}
+
+Future<void> _showDiagonalRenderDirectionDialog(
+  BuildContext context,
+  VoidCallback setState,
+) async {
+  final res = await showDialog<bool>(
+    context: context,
+    builder: (context) => SelectDialog<bool>(
+      title: '对角线方向',
+      value: Pref.diagonalRenderClockwise,
+      values: const [(true, '顺时针'), (false, '逆时针')],
+    ),
+  );
+  if (res != null) {
+    await GStorage.setting.put(SettingBoxKey.diagonalRenderClockwise, res);
+    setState();
+  }
+}
+
+Future<void> _showDiagonalRenderAngleOffsetDialog(
+  BuildContext context,
+  VoidCallback setState,
+) async {
+  final res = await showDialog<double>(
+    context: context,
+    builder: (context) => SliderDialog(
+      title: const Text('倾斜角度偏移'),
+      min: -45.0,
+      max: 45.0,
+      divisions: 180,
+      precise: 1,
+      value: Pref.diagonalRenderAngleOffset,
+      suffix: '°',
+    ),
+  );
+  if (res != null) {
+    await GStorage.setting.put(SettingBoxKey.diagonalRenderAngleOffset, res);
+    setState();
+  }
+}
+
+Future<void> _showDiagonalRenderScaleDialog(
+  BuildContext context,
+  VoidCallback setState,
+) async {
+  final res = await showDialog<double>(
+    context: context,
+    builder: (context) => SliderDialog(
+      title: const Text('视频缩放倍率'),
+      min: 0.0,
+      max: 100.0,
+      divisions: 100,
+      precise: 0,
+      value: Pref.diagonalRenderScale,
+    ),
+  );
+  if (res != null) {
+    await GStorage.setting.put(SettingBoxKey.diagonalRenderScale, res);
     setState();
   }
 }

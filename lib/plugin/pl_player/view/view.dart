@@ -43,6 +43,7 @@ import 'package:PiliPlus/plugin/pl_player/models/fullscreen_mode.dart';
 import 'package:PiliPlus/plugin/pl_player/models/gesture_type.dart';
 import 'package:PiliPlus/plugin/pl_player/models/play_status.dart';
 import 'package:PiliPlus/plugin/pl_player/models/video_fit_type.dart';
+import 'package:PiliPlus/plugin/pl_player/utils/diagonal_render.dart';
 import 'package:PiliPlus/plugin/pl_player/widgets/app_bar_ani.dart';
 import 'package:PiliPlus/plugin/pl_player/widgets/backward_seek.dart';
 import 'package:PiliPlus/plugin/pl_player/widgets/bottom_control.dart';
@@ -63,6 +64,7 @@ import 'package:PiliPlus/utils/path_utils.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:PiliPlus/utils/storage.dart';
 import 'package:PiliPlus/utils/storage_key.dart';
+import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:PiliPlus/utils/utils.dart';
 import 'package:canvas_danmaku/canvas_danmaku.dart';
 import 'package:collection/collection.dart';
@@ -203,6 +205,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
 
   int? tmpSubtitlePaddingB;
   StreamSubscription? _controlsListener;
+  StreamSubscription? _videoSizeListener;
   void _onControlChanged(bool val) {
     final visible = val && !plPlayerController.controlsLock.value;
 
@@ -253,6 +256,9 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
   void initState() {
     super.initState();
     addObserverMobile(this);
+    if (Platform.isAndroid) {
+      DiagonalRenderGeometryCache.refreshCurrentView();
+    }
 
     _controlsListener = plPlayerController.showControls.listen(
       _onControlChanged,
@@ -265,6 +271,15 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
       duration: const Duration(milliseconds: 100),
     );
     videoController = plPlayerController.videoController!;
+    if (Platform.isAndroid) {
+      _videoSizeListener = videoController.player.stream.size.distinct().listen(
+        (_) {
+          if (mounted && isFullScreen && Pref.enableDiagonalRender) {
+            setState(() {});
+          }
+        },
+      );
+    }
 
     if (PlatformUtils.isMobile) {
       Future.microtask(() {
@@ -345,6 +360,15 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
     }
   }
 
+  @override
+  void didChangeMetrics() {
+    if (Platform.isAndroid &&
+        DiagonalRenderGeometryCache.refreshCurrentView() &&
+        mounted) {
+      setState(() {});
+    }
+  }
+
   Future<void> setBrightness(double value) async {
     _brightnessValue.value = value;
     try {
@@ -378,6 +402,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
     _scaleGestureRecognizer.dispose();
     _brightnessListener?.cancel();
     _controlsListener?.cancel();
+    _videoSizeListener?.cancel();
     _animationController.dispose();
     _transformationController.dispose();
     _removeDmAction();
@@ -2020,6 +2045,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
           }),
       ],
     );
+    final transformedChild = _applyDiagonalRender(child);
     if (PlatformUtils.isDesktop) {
       return Obx(
         () => MouseRegion(
@@ -2030,11 +2056,75 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
           onHover: (_) => plPlayerController.controls = true,
           onExit: (_) => plPlayerController.controls =
               widget.videoDetailController?.showSteinEdgeInfo.value ?? false,
-          child: child,
+          child: transformedChild,
         ),
       );
     }
-    return child;
+    return transformedChild;
+  }
+
+  Widget _applyDiagonalRender(Widget child) {
+    if (!Platform.isAndroid ||
+        !isFullScreen ||
+        !Pref.enableDiagonalRender ||
+        maxWidth <= 0 ||
+        maxHeight <= 0) {
+      return child;
+    }
+
+    final videoFit = plPlayerController.videoFit.value;
+    final videoAspectRatio = _diagonalRenderVideoAspectRatio(videoFit);
+    if (videoAspectRatio == null) {
+      return child;
+    }
+
+    final geometry =
+        DiagonalRenderGeometryCache.current ??
+        DiagonalRenderGeometryCache.resolveForSize(
+          ui.Size(maxWidth, maxHeight),
+        );
+    final plan = geometry.planFor(
+      viewportSize: ui.Size(maxWidth, maxHeight),
+      videoAspectRatio: videoAspectRatio,
+      fit: videoFit.boxFit,
+      aspectRatioOverride: videoFit.aspectRatio,
+      clockwise: Pref.diagonalRenderClockwise,
+      angleOffsetDegrees: Pref.diagonalRenderAngleOffset,
+      scaleSliderValue: Pref.diagonalRenderScale,
+    );
+    if (plan == null) {
+      return child;
+    }
+
+    return ClipRect(
+      child: ColoredBox(
+        color: widget.fill,
+        child: Transform(
+          alignment: Alignment.center,
+          transform: Matrix4.identity()
+            ..scaleByDouble(plan.scale, plan.scale, plan.scale, 1)
+            ..rotateZ(plan.rotationRadians),
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  double? _diagonalRenderVideoAspectRatio(VideoFitType videoFit) {
+    final state = plPlayerController.videoPlayerController?.state;
+    return _aspectRatioFromSize(state?.width, state?.height) ??
+        _aspectRatioFromSize(
+          plPlayerController.width,
+          plPlayerController.height,
+        ) ??
+        videoFit.aspectRatio;
+  }
+
+  static double? _aspectRatioFromSize(num? width, num? height) {
+    if (width == null || height == null || width <= 0 || height <= 0) {
+      return null;
+    }
+    return width / height;
   }
 
   Widget get _videoWidget {

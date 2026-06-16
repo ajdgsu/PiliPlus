@@ -1009,6 +1009,24 @@ abstract final class Pref {
   static int get angleDegrees =>
       _setting.get(SettingBoxKey.angleDegrees, defaultValue: 30);
 
+  static bool get enableDiagonalRender =>
+      _setting.get(SettingBoxKey.enableDiagonalRender, defaultValue: false);
+
+  static bool get diagonalRenderClockwise =>
+      _setting.get(SettingBoxKey.diagonalRenderClockwise, defaultValue: true);
+
+  static double get diagonalRenderAngleOffset =>
+      ((_setting.get(SettingBoxKey.diagonalRenderAngleOffset, defaultValue: 0.0)
+              as num)
+          .clamp(-45.0, 45.0)
+          .toDouble());
+
+  static double get diagonalRenderScale =>
+      ((_setting.get(SettingBoxKey.diagonalRenderScale, defaultValue: 50.0)
+              as num)
+          .clamp(0.0, 100.0)
+          .toDouble());
+
   static double get playerVolume => // mobile
       _setting.get(SettingBoxKey.playerVolume, defaultValue: 100.0);
 
