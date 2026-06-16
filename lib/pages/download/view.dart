@@ -4,7 +4,6 @@ import 'package:PiliPlus/common/style.dart';
 import 'package:PiliPlus/common/widgets/appbar/appbar.dart';
 import 'package:PiliPlus/common/widgets/badge.dart';
 import 'package:PiliPlus/common/widgets/dialog/dialog.dart';
-import 'package:PiliPlus/common/widgets/flutter/layout_builder.dart';
 import 'package:PiliPlus/common/widgets/flutter/pop_scope.dart';
 import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
 import 'package:PiliPlus/common/widgets/loading_widget/http_error.dart';
@@ -17,12 +16,12 @@ import 'package:PiliPlus/pages/download/detail/widgets/item.dart';
 import 'package:PiliPlus/pages/download/search/view.dart';
 import 'package:PiliPlus/services/download/download_service.dart';
 import 'package:PiliPlus/utils/cache_manager.dart';
-import 'package:PiliPlus/utils/extension/iterable_ext.dart' show IterableExt;
 import 'package:PiliPlus/utils/grid.dart';
 import 'package:PiliPlus/utils/platform_utils.dart';
 import 'package:PiliPlus/utils/storage.dart';
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart'
-    hide SliverGridDelegateWithMaxCrossAxisExtent, LayoutBuilder;
+    hide SliverGridDelegateWithMaxCrossAxisExtent;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 
@@ -385,7 +384,7 @@ class _DownloadPageState extends State<DownloadPage> {
                             color: theme.colorScheme.outline,
                           ),
                         ),
-                        pageInfo.entries.first.moreBtn(theme),
+                        pageInfo.entries.first.moreBtn(theme.colorScheme),
                       ],
                     ),
                   ],

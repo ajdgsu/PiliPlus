@@ -11,6 +11,7 @@ import 'package:PiliPlus/common/widgets/custom_icon.dart';
 import 'package:PiliPlus/common/widgets/disabled_icon.dart';
 import 'package:PiliPlus/common/widgets/gesture/immediate_tap_gesture_recognizer.dart';
 import 'package:PiliPlus/common/widgets/gesture/mouse_interactive_viewer.dart';
+import 'package:PiliPlus/common/widgets/gesture/player_gesture_recognizer.dart';
 import 'package:PiliPlus/common/widgets/loading_widget.dart';
 import 'package:PiliPlus/common/widgets/pair.dart';
 import 'package:PiliPlus/common/widgets/player_bar.dart';
@@ -24,8 +25,6 @@ import 'package:PiliPlus/models/common/super_resolution_type.dart';
 import 'package:PiliPlus/models/common/video/video_quality.dart';
 import 'package:PiliPlus/models/video/play/url.dart';
 import 'package:PiliPlus/models_new/video/video_detail/episode.dart' as ugc;
-import 'package:PiliPlus/models_new/video/video_detail/episode.dart';
-import 'package:PiliPlus/models_new/video/video_detail/section.dart';
 import 'package:PiliPlus/models_new/video/video_detail/ugc_season.dart';
 import 'package:PiliPlus/pages/common/common_intro_controller.dart';
 import 'package:PiliPlus/pages/danmaku/danmaku_model.dart';
@@ -51,6 +50,8 @@ import 'package:PiliPlus/plugin/pl_player/widgets/common_btn.dart';
 import 'package:PiliPlus/plugin/pl_player/widgets/forward_seek.dart';
 import 'package:PiliPlus/plugin/pl_player/widgets/mpv_convert_webp.dart';
 import 'package:PiliPlus/plugin/pl_player/widgets/play_pause_btn.dart';
+import 'package:PiliPlus/utils/android/bindings.g.dart';
+import 'package:PiliPlus/utils/cache_manager.dart';
 import 'package:PiliPlus/utils/connectivity_utils.dart';
 import 'package:PiliPlus/utils/duration_utils.dart';
 import 'package:PiliPlus/utils/extension/num_ext.dart';
@@ -73,7 +74,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart'
     show RenderProxyBox, SemanticsConfiguration;
 import 'package:flutter/services.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:flutter_volume_controller/flutter_volume_controller.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -152,6 +152,54 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
   bool _pauseDueToPauseUponEnteringBackgroundMode = false;
 
   StreamSubscription? _brightnessListener;
+  void _onBrightnessChanged(double value) {
+    if (mounted && _gestureType != .left) {
+      _brightnessValue.value = value;
+    }
+  }
+
+  void _getSystemBrightness() {
+    ScreenBrightnessPlatform.instance.system.then((res) {
+      if (mounted) {
+        _brightnessValue.value = res;
+      }
+    });
+  }
+
+  void _getAppBrightness() {
+    ScreenBrightnessPlatform.instance.application.then((res) {
+      if (mounted) {
+        _brightnessValue.value = res;
+      }
+    });
+  }
+
+  void _onVolumeChanged(double value) {
+    if (mounted && !plPlayerController.volumeInterceptEventStream) {
+      plPlayerController.volume.value = value;
+      if (Platform.isIOS && !FlutterVolumeController.showSystemUI) {
+        plPlayerController
+          ..volumeIndicator.value = true
+          ..volumeTimer?.cancel()
+          ..volumeTimer = Timer(
+            const Duration(milliseconds: 800),
+            () {
+              if (mounted) {
+                plPlayerController.volumeIndicator.value = false;
+              }
+            },
+          );
+      }
+    }
+  }
+
+  void _getCurrVolume() {
+    FlutterVolumeController.getVolume().then((res) {
+      if (mounted) {
+        plPlayerController.volume.value = res!;
+      }
+    });
+  }
 
   int? tmpSubtitlePaddingB;
   StreamSubscription? _controlsListener;
@@ -219,51 +267,29 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
     videoController = plPlayerController.videoController!;
 
     if (PlatformUtils.isMobile) {
-      Future.microtask(() async {
+      Future.microtask(() {
         try {
           FlutterVolumeController.updateShowSystemUI(true);
-          plPlayerController.volume.value =
-              (await FlutterVolumeController.getVolume())!;
-          FlutterVolumeController.addListener((double value) {
-            if (mounted && !plPlayerController.volumeInterceptEventStream) {
-              plPlayerController.volume.value = value;
-              if (Platform.isIOS && !FlutterVolumeController.showSystemUI) {
-                plPlayerController
-                  ..volumeIndicator.value = true
-                  ..volumeTimer?.cancel()
-                  ..volumeTimer = Timer(const Duration(milliseconds: 800), () {
-                    if (mounted) {
-                      plPlayerController.volumeIndicator.value = false;
-                    }
-                  });
-              }
-            }
-          }, emitOnStart: false);
+          _getCurrVolume();
+          FlutterVolumeController.addListener(
+            _onVolumeChanged,
+            emitOnStart: false,
+          );
         } catch (_) {}
-      });
 
-      Future.microtask(() async {
         try {
-          void listener(double value) {
-            if (mounted) {
-              _brightnessValue.value = value;
-            }
-          }
-
           if (Platform.isIOS || plPlayerController.setSystemBrightness) {
-            _brightnessValue.value =
-                await ScreenBrightnessPlatform.instance.system;
+            _getSystemBrightness();
             _brightnessListener = ScreenBrightnessPlatform
                 .instance
                 .onSystemScreenBrightnessChanged
-                .listen(listener);
+                .listen(_onBrightnessChanged);
           } else {
-            _brightnessValue.value =
-                await ScreenBrightnessPlatform.instance.application;
+            _getAppBrightness();
             _brightnessListener = ScreenBrightnessPlatform
                 .instance
                 .onApplicationScreenBrightnessChanged
-                .listen(listener);
+                .listen(_onBrightnessChanged);
           }
         } catch (_) {}
       });
@@ -289,7 +315,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
     _doubleTapGestureRecognizer = DoubleTapGestureRecognizer()
       ..onDoubleTapDown = _onDoubleTapDown;
 
-    _scaleGestureRecognizer = ScaleGestureRecognizer(
+    _scaleGestureRecognizer = PlayerScaleGestureRecognizer(
       debugOwner: this,
       dragStartBehavior: .start,
       allowedButtonsFilter: (buttons) => buttons == kPrimaryButton,
@@ -320,6 +346,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
   }
 
   Future<void> setBrightness(double value) async {
+    _brightnessValue.value = value;
     try {
       if (Platform.isIOS || plPlayerController.setSystemBrightness) {
         await ScreenBrightnessPlatform.instance.setSystemScreenBrightness(
@@ -550,9 +577,9 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
           String bvid = plPlayerController.bvid;
           List<ugc.BaseEpisodeItem> episodes = [];
           if (isSeason) {
-            final List<SectionItem> sections = videoDetail.ugcSeason!.sections!;
+            final sections = videoDetail.ugcSeason!.sections!;
             for (int i = 0; i < sections.length; i++) {
-              final List<EpisodeItem> episodesList = sections[i].episodes!;
+              final episodesList = sections[i].episodes!;
               for (final item in episodesList) {
                 if (item.cid == currentCid) {
                   index = i;
@@ -782,18 +809,12 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
           if (videoInfo.dash == null) {
             return const SizedBox.shrink();
           }
-          final List<FormatItem> videoFormat = videoInfo.supportFormats!;
-          final int totalQaSam = videoFormat.length;
-          int usefulQaSam = 0;
-          final List<VideoItem> video = videoInfo.dash!.video!;
-          final Set<int> idSet = {};
-          for (final VideoItem item in video) {
-            final int id = item.id!;
-            if (!idSet.contains(id)) {
-              idSet.add(id);
-              usefulQaSam++;
-            }
-          }
+          final videoFormat = videoInfo.supportFormats!;
+          final totalQaSam = videoFormat.length;
+          final usefulQaSam = videoInfo.dash!.video!
+              .map((i) => i.id)
+              .toSet()
+              .length;
           return PopupMenuButton<int>(
             tooltip: '画质',
             requestFocus: false,
@@ -863,16 +884,8 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
         height: 30,
         tooltip: isFullScreen ? '退出全屏' : '全屏',
         icon: isFullScreen
-            ? const Icon(
-                Icons.fullscreen_exit,
-                size: 24,
-                color: Colors.white,
-              )
-            : const Icon(
-                Icons.fullscreen,
-                size: 24,
-                color: Colors.white,
-              ),
+            ? const Icon(Icons.fullscreen_exit, size: 24, color: Colors.white)
+            : const Icon(Icons.fullscreen, size: 24, color: Colors.white),
         onTap: () =>
             plPlayerController.triggerFullScreen(status: !isFullScreen),
         onSecondaryTap: () => plPlayerController.triggerFullScreen(
@@ -885,29 +898,24 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
     final isNotFileSource = !plPlayerController.isFileSource;
 
     List<BottomControlType> userSpecifyItemLeft = [
-      BottomControlType.playOrPause,
-      BottomControlType.time,
-      if (!isNotFileSource || anySeason) ...[
-        BottomControlType.pre,
-        BottomControlType.next,
-      ],
+      .playOrPause,
+      .time,
+      if (!isNotFileSource || anySeason) ...[.pre, .next],
     ];
 
     final flag =
         isFullScreen || plPlayerController.isDesktopPip || maxWidth >= 500;
-    List<BottomControlType> userSpecifyItemRight = [
-      if (isNotFileSource && plPlayerController.showDmChart)
-        BottomControlType.dmChart,
-      if (plPlayerController.isAnim) BottomControlType.superResolution,
-      if (isNotFileSource && plPlayerController.showViewPoints)
-        BottomControlType.viewPoints,
-      if (isNotFileSource && anySeason) BottomControlType.episode,
-      if (flag) BottomControlType.fit,
-      if (isNotFileSource) BottomControlType.aiTranslate,
-      BottomControlType.subtitle,
-      BottomControlType.speed,
-      if (isNotFileSource && flag) BottomControlType.qa,
-      if (!plPlayerController.isDesktopPip) BottomControlType.fullscreen,
+    final List<BottomControlType> userSpecifyItemRight = [
+      if (isNotFileSource && plPlayerController.showDmChart) .dmChart,
+      if (plPlayerController.isAnim) .superResolution,
+      if (isNotFileSource && plPlayerController.showViewPoints) .viewPoints,
+      if (isNotFileSource && anySeason) .episode,
+      if (flag) .fit,
+      if (isNotFileSource) .aiTranslate,
+      .subtitle,
+      .speed,
+      if (isNotFileSource && flag) .qa,
+      if (!plPlayerController.isDesktopPip) .fullscreen,
     ];
     return PlayerBar(
       children: [
@@ -937,6 +945,14 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
   void didChangeDependencies() {
     super.didChangeDependencies();
     colorScheme = ColorScheme.of(context);
+  }
+
+  @override
+  void didUpdateWidget(covariant PLVideoPlayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (Platform.isAndroid && AndroidHelper.isPipMode) {
+      plPlayerController.controls = false;
+    }
   }
 
   void _onPanStart(ScaleStartDetails details) {
@@ -1021,21 +1037,14 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
             displayTime: const Duration(milliseconds: 1500),
             maskColor: Colors.transparent,
             builder: (context) => Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 4,
-              ),
+              padding: const .symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                borderRadius: const BorderRadius.all(
-                  Radius.circular(6),
-                ),
+                borderRadius: const .all(.circular(6)),
                 color: colorScheme.secondaryContainer,
               ),
               child: Text(
                 '松开手指，取消进退',
-                style: TextStyle(
-                  color: colorScheme.onSecondaryContainer,
-                ),
+                style: TextStyle(color: colorScheme.onSecondaryContainer),
               ),
             ),
           );
@@ -1095,7 +1104,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
           final double volume = clampDouble(
             plPlayerController.volume.value - delta.dy / level,
             0.0,
-            PlPlayerController.maxVolume,
+            plPlayerController.maxVolume,
           );
           plPlayerController.setVolume(volume);
         },
@@ -1104,11 +1113,6 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
   }
 
   void _onPanEnd(ScaleEndDetails details) {
-    if (Platform.isAndroid &&
-        _gestureType == .left &&
-        plPlayerController.setSystemBrightness) {
-      ScreenBrightnessPlatform.instance.restoreBrightnessMode();
-    }
     if (plPlayerController.showSeekPreview) {
       plPlayerController.showPreview.value = false;
     }
@@ -1207,11 +1211,11 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
             plPlayerController.setLongPressStatus(false));
   late final ImmediateTapGestureRecognizer _tapGestureRecognizer;
   late final DoubleTapGestureRecognizer _doubleTapGestureRecognizer;
-  late final ScaleGestureRecognizer _scaleGestureRecognizer;
+  late final PlayerScaleGestureRecognizer _scaleGestureRecognizer;
 
   StreamSubscription<bool>? _danmakuListener;
 
-  static const _kOffsetThreshold = 30.0;
+  static const _kOffsetThreshold = 25.0;
   bool _isPositionAllowed(Offset offset) {
     if (offset.dx < _kOffsetThreshold ||
         offset.dy < _kOffsetThreshold ||
@@ -1249,9 +1253,9 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
           _doubleTapGestureRecognizer.addPointer(event);
           longPressRecognizer.addPointer(event);
         }
-        if (_isPositionAllowed(event.localPosition)) {
-          _scaleGestureRecognizer.addPointer(event);
-        }
+        _scaleGestureRecognizer
+          ..isPosAllowed = _isPositionAllowed(event.localPosition)
+          ..addPointer(event);
       }
     } else if (controlsUnlock) {
       if (plPlayerController.isLive) {
@@ -1318,7 +1322,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
           final double volume = clampDouble(
             plPlayerController.volume.value - event.localPanDelta.dy / level,
             0.0,
-            PlPlayerController.maxVolume,
+            plPlayerController.maxVolume,
           );
           plPlayerController.setVolume(volume);
         },
@@ -1342,7 +1346,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
       final volume = clampDouble(
         plPlayerController.volume.value + offset,
         0.0,
-        PlPlayerController.maxVolume,
+        plPlayerController.maxVolume,
       );
       plPlayerController.setVolume(volume);
     }
@@ -1785,10 +1789,16 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
                           child: ViewPointSegmentProgressBar(
                             segments: videoDetailController.viewPointList,
                             onSeek: PlatformUtils.isMobile
-                                ? (position) => plPlayerController.seekTo(
-                                    position,
-                                    isSeek: false,
-                                  )
+                                ? (position) {
+                                    if (!plPlayerController
+                                        .controlsLock
+                                        .value) {
+                                      plPlayerController.seekTo(
+                                        position,
+                                        isSeek: false,
+                                      );
+                                    }
+                                  }
                                 : null,
                           ),
                         ),
