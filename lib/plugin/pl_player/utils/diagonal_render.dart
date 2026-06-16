@@ -1,12 +1,13 @@
 import 'dart:math' as math;
 
-import 'package:flutter/widgets.dart' show BoxFit, Size, WidgetsBinding;
+import 'package:flutter/widgets.dart' show BoxFit, Offset, Size, WidgetsBinding;
 
 final class DiagonalRenderPlan {
   const DiagonalRenderPlan({
     required this.viewportSize,
     required this.videoContentSize,
     required this.baseAngleRadians,
+    required this.balancedAngleRadians,
     required this.rotationRadians,
     required this.underscanScale,
     required this.overscanScale,
@@ -18,6 +19,7 @@ final class DiagonalRenderPlan {
   final Size viewportSize;
   final Size videoContentSize;
   final double baseAngleRadians;
+  final double balancedAngleRadians;
   final double rotationRadians;
   final double underscanScale;
   final double overscanScale;
@@ -26,6 +28,8 @@ final class DiagonalRenderPlan {
   final double interfaceScale;
 
   double get baseAngleDegrees => baseAngleRadians * 180 / math.pi;
+
+  double get balancedAngleDegrees => balancedAngleRadians * 180 / math.pi;
 }
 
 final class DiagonalRenderGeometry {
@@ -40,6 +44,10 @@ final class DiagonalRenderGeometry {
   final double baseAngleRadians;
   final double underscanScale;
   final double overscanScale;
+
+  static const double _balancedAngleGainFloor = 0.97;
+  static const int _balancedAngleScanSteps = 48;
+  static const int _balancedAngleRefineRounds = 3;
 
   double get baseAngleDegrees => baseAngleRadians * 180 / math.pi;
 
@@ -97,34 +105,25 @@ final class DiagonalRenderGeometry {
     }
 
     final baseAngle = baseAngleForViewport(viewportSize);
-    final absAngle = baseAngle.abs();
-    final cosTheta = math.cos(absAngle);
-    final sinTheta = math.sin(absAngle);
-    final rotatedContentWidth =
-        videoContentSize.width * cosTheta + videoContentSize.height * sinTheta;
-    final rotatedContentHeight =
-        videoContentSize.width * sinTheta + videoContentSize.height * cosTheta;
-    final underscanScale = math.min(
-      viewportSize.width / rotatedContentWidth,
-      viewportSize.height / rotatedContentHeight,
+    final balancedAngle = _balancedAngleFor(
+      viewportSize: viewportSize,
+      contentSize: videoContentSize,
+      baseAngle: baseAngle,
+      scaleSliderValue: scaleSliderValue,
     );
-
-    final inverseViewportWidth =
-        viewportSize.width * cosTheta + viewportSize.height * sinTheta;
-    final inverseViewportHeight =
-        viewportSize.width * sinTheta + viewportSize.height * cosTheta;
-    final rawOverscanScale = math.max(
-      inverseViewportWidth / videoContentSize.width,
-      inverseViewportHeight / videoContentSize.height,
+    final scaleBounds = _scaleBoundsForAngle(
+      viewportSize: viewportSize,
+      contentSize: videoContentSize,
+      angle: balancedAngle,
     );
-    final overscanScale = math.max(rawOverscanScale, underscanScale);
     final scale = _scaleFor(
       scaleSliderValue,
-      underscanScale: underscanScale,
-      overscanScale: overscanScale,
+      underscanScale: scaleBounds.underscan,
+      overscanScale: scaleBounds.overscan,
     );
     final direction = clockwise ? 1.0 : -1.0;
-    final rotation = direction * baseAngle + angleOffsetDegrees * math.pi / 180;
+    final rotation =
+        direction * balancedAngle + angleOffsetDegrees * math.pi / 180;
     final maxInterfaceScale = _maxScaleForRotatedSize(
       viewportSize: viewportSize,
       contentSize: viewportSize,
@@ -136,9 +135,10 @@ final class DiagonalRenderGeometry {
       viewportSize: viewportSize,
       videoContentSize: videoContentSize,
       baseAngleRadians: baseAngle,
+      balancedAngleRadians: balancedAngle,
       rotationRadians: rotation,
-      underscanScale: underscanScale,
-      overscanScale: overscanScale,
+      underscanScale: scaleBounds.underscan,
+      overscanScale: scaleBounds.overscan,
       scale: scale,
       maxInterfaceScale: maxInterfaceScale,
       interfaceScale: interfaceScale,
@@ -197,6 +197,237 @@ final class DiagonalRenderGeometry {
     };
   }
 
+  static _ScaleBounds _scaleBoundsForAngle({
+    required Size viewportSize,
+    required Size contentSize,
+    required double angle,
+  }) {
+    final absAngle = angle.abs();
+    final cosTheta = math.cos(absAngle);
+    final sinTheta = math.sin(absAngle);
+    final rotatedContentWidth =
+        contentSize.width * cosTheta + contentSize.height * sinTheta;
+    final rotatedContentHeight =
+        contentSize.width * sinTheta + contentSize.height * cosTheta;
+    final underscanScale = math.min(
+      viewportSize.width / rotatedContentWidth,
+      viewportSize.height / rotatedContentHeight,
+    );
+
+    final inverseViewportWidth =
+        viewportSize.width * cosTheta + viewportSize.height * sinTheta;
+    final inverseViewportHeight =
+        viewportSize.width * sinTheta + viewportSize.height * cosTheta;
+    final rawOverscanScale = math.max(
+      inverseViewportWidth / contentSize.width,
+      inverseViewportHeight / contentSize.height,
+    );
+    return _ScaleBounds(
+      underscan: underscanScale,
+      overscan: math.max(rawOverscanScale, underscanScale),
+    );
+  }
+
+  static double _balancedAngleFor({
+    required Size viewportSize,
+    required Size contentSize,
+    required double baseAngle,
+    required double scaleSliderValue,
+  }) {
+    final diagonal = math.sqrt(
+      viewportSize.width * viewportSize.width +
+          viewportSize.height * viewportSize.height,
+    );
+    final longSide = math.max(viewportSize.width, viewportSize.height);
+    final diagonalGain = diagonal - longSide;
+    if (diagonalGain <= 0) {
+      return baseAngle;
+    }
+
+    final minSpan =
+        longSide + diagonalGain * _balancedAngleGainFloor.clamp(0.0, 1.0);
+    final maxDelta = math.acos((minSpan / diagonal).clamp(-1.0, 1.0));
+    if (maxDelta <= 1e-9) {
+      return baseAngle;
+    }
+
+    final startAngle = math.max(0.0, baseAngle - maxDelta);
+    final endAngle = math.min(math.pi / 2, baseAngle + maxDelta);
+    var bestAngle = baseAngle;
+    var bestScore = _cornerCropImbalance(
+      viewportSize: viewportSize,
+      contentSize: contentSize,
+      angle: baseAngle,
+      scaleSliderValue: scaleSliderValue,
+    );
+    var searchStart = startAngle;
+    var searchEnd = endAngle;
+
+    for (var round = 0; round <= _balancedAngleRefineRounds; round++) {
+      final step = (searchEnd - searchStart) / _balancedAngleScanSteps;
+      if (step <= 0) {
+        break;
+      }
+
+      for (var i = 0; i <= _balancedAngleScanSteps; i++) {
+        final angle = searchStart + step * i;
+        final score = _cornerCropImbalance(
+          viewportSize: viewportSize,
+          contentSize: contentSize,
+          angle: angle,
+          scaleSliderValue: scaleSliderValue,
+        );
+        if (score < bestScore - 1e-9) {
+          bestScore = score;
+          bestAngle = angle;
+        }
+      }
+
+      searchStart = math.max(startAngle, bestAngle - step);
+      searchEnd = math.min(endAngle, bestAngle + step);
+    }
+
+    return bestAngle;
+  }
+
+  static double _cornerCropImbalance({
+    required Size viewportSize,
+    required Size contentSize,
+    required double angle,
+    required double scaleSliderValue,
+  }) {
+    final scaleBounds = _scaleBoundsForAngle(
+      viewportSize: viewportSize,
+      contentSize: contentSize,
+      angle: angle,
+    );
+    final scale = _scaleFor(
+      scaleSliderValue,
+      underscanScale: scaleBounds.underscan,
+      overscanScale: scaleBounds.overscan,
+    );
+    if (scale <= scaleBounds.underscan + 1e-9) {
+      return 0.0;
+    }
+
+    final scaledWidth = contentSize.width * scale;
+    final scaledHeight = contentSize.height * scale;
+    final quadrantArea = scaledWidth * scaledHeight / 4;
+    final halfWidth = scaledWidth / 2;
+    final halfHeight = scaledHeight / 2;
+    final quadrants = <List<Offset>>[
+      [
+        Offset(-halfWidth, -halfHeight),
+        Offset(0, -halfHeight),
+        Offset.zero,
+        Offset(-halfWidth, 0),
+      ],
+      [
+        Offset(0, -halfHeight),
+        Offset(halfWidth, -halfHeight),
+        Offset(halfWidth, 0),
+        Offset.zero,
+      ],
+      [
+        Offset.zero,
+        Offset(halfWidth, 0),
+        Offset(halfWidth, halfHeight),
+        Offset(0, halfHeight),
+      ],
+      [
+        Offset(-halfWidth, 0),
+        Offset.zero,
+        Offset(0, halfHeight),
+        Offset(-halfWidth, halfHeight),
+      ],
+    ];
+    final halfPlanes = _viewportHalfPlanes(viewportSize, angle);
+    var minCrop = double.infinity;
+    var maxCrop = 0.0;
+    for (final quadrant in quadrants) {
+      final visibleArea = _clipAreaByHalfPlanes(quadrant, halfPlanes);
+      final cropArea = math.max(0.0, quadrantArea - visibleArea);
+      minCrop = math.min(minCrop, cropArea);
+      maxCrop = math.max(maxCrop, cropArea);
+    }
+
+    return (maxCrop - minCrop) / (scaledWidth * scaledHeight);
+  }
+
+  static List<_HalfPlane> _viewportHalfPlanes(Size viewportSize, double angle) {
+    final cosTheta = math.cos(angle);
+    final sinTheta = math.sin(angle);
+    return [
+      _HalfPlane(cosTheta, -sinTheta, viewportSize.width / 2),
+      _HalfPlane(-cosTheta, sinTheta, viewportSize.width / 2),
+      _HalfPlane(sinTheta, cosTheta, viewportSize.height / 2),
+      _HalfPlane(-sinTheta, -cosTheta, viewportSize.height / 2),
+    ];
+  }
+
+  static double _clipAreaByHalfPlanes(
+    List<Offset> polygon,
+    List<_HalfPlane> halfPlanes,
+  ) {
+    var clipped = polygon;
+    for (final halfPlane in halfPlanes) {
+      clipped = _clipPolygon(clipped, halfPlane);
+      if (clipped.isEmpty) {
+        return 0.0;
+      }
+    }
+    return _polygonArea(clipped);
+  }
+
+  static List<Offset> _clipPolygon(
+    List<Offset> polygon,
+    _HalfPlane halfPlane,
+  ) {
+    if (polygon.isEmpty) {
+      return const [];
+    }
+
+    final output = <Offset>[];
+    for (var i = 0; i < polygon.length; i++) {
+      final current = polygon[i];
+      final next = polygon[(i + 1) % polygon.length];
+      final currentDistance = halfPlane.distance(current);
+      final nextDistance = halfPlane.distance(next);
+      final currentInside = currentDistance <= 1e-9;
+      final nextInside = nextDistance <= 1e-9;
+
+      if (currentInside && nextInside) {
+        output.add(next);
+      } else if (currentInside != nextInside) {
+        final t = currentDistance / (currentDistance - nextDistance);
+        output.add(
+          Offset(
+            current.dx + (next.dx - current.dx) * t,
+            current.dy + (next.dy - current.dy) * t,
+          ),
+        );
+        if (nextInside) {
+          output.add(next);
+        }
+      }
+    }
+    return output;
+  }
+
+  static double _polygonArea(List<Offset> polygon) {
+    if (polygon.length < 3) {
+      return 0.0;
+    }
+
+    var area = 0.0;
+    for (var i = 0; i < polygon.length; i++) {
+      final current = polygon[i];
+      final next = polygon[(i + 1) % polygon.length];
+      area += current.dx * next.dy - next.dx * current.dy;
+    }
+    return area.abs() / 2;
+  }
+
   static double _maxScaleForRotatedSize({
     required Size viewportSize,
     required Size contentSize,
@@ -228,6 +459,26 @@ final class DiagonalRenderGeometry {
   static double _longSideRatio(double width, double height) {
     return math.max(width, height) / math.min(width, height);
   }
+}
+
+final class _ScaleBounds {
+  const _ScaleBounds({
+    required this.underscan,
+    required this.overscan,
+  });
+
+  final double underscan;
+  final double overscan;
+}
+
+final class _HalfPlane {
+  const _HalfPlane(this.a, this.b, this.c);
+
+  final double a;
+  final double b;
+  final double c;
+
+  double distance(Offset point) => a * point.dx + b * point.dy - c;
 }
 
 abstract final class DiagonalRenderGeometryCache {

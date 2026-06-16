@@ -73,11 +73,73 @@ void main() {
       scaleSliderValue: 50,
     )!;
 
-    expect(plan.underscanScale, closeTo(0.8329, 0.0001));
-    expect(plan.overscanScale, closeTo(2.3879, 0.0001));
+    expect(plan.underscanScale, closeTo(0.8759, 0.0001));
+    expect(plan.overscanScale, closeTo(2.3401, 0.0001));
     expect(
       plan.scale,
       closeTo((plan.underscanScale + plan.overscanScale) / 2, 0.0001),
+    );
+  });
+
+  test('balances the render angle while preserving diagonal screen gain', () {
+    final geometry = DiagonalRenderGeometryCache.resolveForSize(
+      const Size(2248, 2480),
+    );
+
+    final plan = geometry.planFor(
+      viewportSize: const Size(2480, 2248),
+      videoAspectRatio: 16 / 9,
+      fit: BoxFit.contain,
+      clockwise: true,
+      angleOffsetDegrees: 0,
+      scaleSliderValue: 50,
+    )!;
+    final noCropPlan = geometry.planFor(
+      viewportSize: const Size(2480, 2248),
+      videoAspectRatio: 16 / 9,
+      fit: BoxFit.contain,
+      clockwise: true,
+      angleOffsetDegrees: 0,
+      scaleSliderValue: 0,
+    )!;
+
+    expect(plan.baseAngleDegrees, closeTo(42.19, 0.01));
+    expect(plan.balancedAngleDegrees, closeTo(35.04, 0.01));
+    expect(
+      _diagonalGain(
+        const Size(2480, 2248),
+        plan.balancedAngleRadians,
+      ),
+      greaterThanOrEqualTo(0.97),
+    );
+    expect(noCropPlan.balancedAngleRadians, noCropPlan.baseAngleRadians);
+  });
+
+  test('mirrors the balanced angle across device orientations', () {
+    final geometry = DiagonalRenderGeometryCache.resolveForSize(
+      const Size(2248, 2480),
+    );
+
+    final landscapePlan = geometry.planFor(
+      viewportSize: const Size(2480, 2248),
+      videoAspectRatio: 16 / 9,
+      fit: BoxFit.contain,
+      clockwise: true,
+      angleOffsetDegrees: 0,
+      scaleSliderValue: 50,
+    )!;
+    final portraitPlan = geometry.planFor(
+      viewportSize: const Size(2248, 2480),
+      videoAspectRatio: 16 / 9,
+      fit: BoxFit.contain,
+      clockwise: true,
+      angleOffsetDegrees: 0,
+      scaleSliderValue: 50,
+    )!;
+
+    expect(
+      landscapePlan.balancedAngleDegrees + portraitPlan.balancedAngleDegrees,
+      closeTo(90, 0.01),
     );
   });
 
@@ -96,7 +158,7 @@ void main() {
 
     expect(plan.scale, greaterThan(plan.maxInterfaceScale));
     expect(plan.interfaceScale, plan.maxInterfaceScale);
-    expect(plan.maxInterfaceScale, closeTo(0.6748, 0.0001));
+    expect(plan.maxInterfaceScale, closeTo(0.6886, 0.0001));
   });
 
   test('keeps interface scale aligned with video when it is already safe', () {
@@ -188,4 +250,16 @@ void main() {
     DiagonalRenderGeometryCache.resolveForSize(const Size(1080, 2400));
     expect(DiagonalRenderGeometryCache.debugComputeCount, firstCount + 1);
   });
+}
+
+double _diagonalGain(Size viewportSize, double angle) {
+  final diagonal = math.sqrt(
+    viewportSize.width * viewportSize.width +
+        viewportSize.height * viewportSize.height,
+  );
+  final longSide = math.max(viewportSize.width, viewportSize.height);
+  final span =
+      viewportSize.width * math.cos(angle) +
+      viewportSize.height * math.sin(angle);
+  return (span - longSide) / (diagonal - longSide);
 }
