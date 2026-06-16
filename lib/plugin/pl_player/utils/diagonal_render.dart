@@ -1,6 +1,15 @@
 import 'dart:math' as math;
 
-import 'package:flutter/widgets.dart' show BoxFit, Offset, Size, WidgetsBinding;
+import 'package:flutter/foundation.dart' show ValueNotifier;
+import 'package:flutter/widgets.dart'
+    show
+        BoxFit,
+        BuildContext,
+        EdgeInsets,
+        InheritedWidget,
+        Offset,
+        Size,
+        WidgetsBinding;
 
 final class DiagonalRenderPlan {
   const DiagonalRenderPlan({
@@ -30,6 +39,95 @@ final class DiagonalRenderPlan {
   double get baseAngleDegrees => baseAngleRadians * 180 / math.pi;
 
   double get balancedAngleDegrees => balancedAngleRadians * 180 / math.pi;
+
+  double get danmakuPositionScale => scale.isFinite && scale > 0 ? scale : 1.0;
+
+  EdgeInsets get interfaceInsets {
+    final safeScale = maxInterfaceScale.clamp(0.0, 1.0).toDouble();
+    if (safeScale >= 1.0) {
+      return EdgeInsets.zero;
+    }
+    return EdgeInsets.symmetric(
+      horizontal: viewportSize.width * (1.0 - safeScale) / 2,
+      vertical: viewportSize.height * (1.0 - safeScale) / 2,
+    );
+  }
+}
+
+final class DiagonalRenderOverlayTransform {
+  const DiagonalRenderOverlayTransform({
+    required this.viewportSize,
+    required this.rotationRadians,
+    required this.interfaceInsets,
+  });
+
+  factory DiagonalRenderOverlayTransform.fromPlan(DiagonalRenderPlan plan) {
+    return DiagonalRenderOverlayTransform(
+      viewportSize: plan.viewportSize,
+      rotationRadians: plan.rotationRadians,
+      interfaceInsets: plan.interfaceInsets,
+    );
+  }
+
+  final Size viewportSize;
+  final double rotationRadians;
+  final EdgeInsets interfaceInsets;
+}
+
+abstract final class DiagonalRenderToastTransform {
+  static final ValueNotifier<DiagonalRenderOverlayTransform?> notifier =
+      ValueNotifier(null);
+
+  static DiagonalRenderOverlayTransform? get value => notifier.value;
+
+  static void update(DiagonalRenderOverlayTransform? transform) {
+    if (same(value, transform)) {
+      return;
+    }
+    notifier.value = transform;
+  }
+
+  static bool same(
+    DiagonalRenderOverlayTransform? a,
+    DiagonalRenderOverlayTransform? b,
+  ) {
+    if (identical(a, b)) {
+      return true;
+    }
+    if (a == null || b == null) {
+      return false;
+    }
+    return _close(a.viewportSize.width, b.viewportSize.width) &&
+        _close(a.viewportSize.height, b.viewportSize.height) &&
+        _close(a.rotationRadians, b.rotationRadians) &&
+        _close(a.interfaceInsets.left, b.interfaceInsets.left) &&
+        _close(a.interfaceInsets.top, b.interfaceInsets.top) &&
+        _close(a.interfaceInsets.right, b.interfaceInsets.right) &&
+        _close(a.interfaceInsets.bottom, b.interfaceInsets.bottom);
+  }
+
+  static bool _close(double a, double b) => (a - b).abs() < 1e-6;
+}
+
+class DiagonalRenderScope extends InheritedWidget {
+  const DiagonalRenderScope({
+    super.key,
+    required this.danmakuPositionScale,
+    required super.child,
+  });
+
+  final double danmakuPositionScale;
+
+  static double danmakuPositionScaleOf(BuildContext context) {
+    final scope = context
+        .dependOnInheritedWidgetOfExactType<DiagonalRenderScope>();
+    return scope?.danmakuPositionScale ?? 1.0;
+  }
+
+  @override
+  bool updateShouldNotify(covariant DiagonalRenderScope oldWidget) {
+    return danmakuPositionScale != oldWidget.danmakuPositionScale;
+  }
 }
 
 final class DiagonalRenderGeometry {

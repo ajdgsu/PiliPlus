@@ -144,6 +144,8 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
   final RxDouble _brightnessValue = 0.0.obs;
   final RxBool _brightnessIndicator = false.obs;
   Timer? _brightnessTimer;
+  final RxBool _cancelSeekToastVisible = false.obs;
+  Timer? _cancelSeekToastTimer;
 
   late FullScreenMode mode;
 
@@ -419,6 +421,8 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
     _controlsListener?.cancel();
     _videoSizeListener?.cancel();
     _diagonalRenderSettingsListener?.cancel();
+    _cancelSeekToastTimer?.cancel();
+    DiagonalRenderToastTransform.update(null);
     _animationController.dispose();
     _transformationController.dispose();
     _removeDmAction();
@@ -981,6 +985,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
   late ColorScheme colorScheme;
   late double maxWidth;
   late double maxHeight;
+  DiagonalRenderOverlayTransform? _lastDiagonalToastTransform;
 
   @override
   void didChangeDependencies() {
@@ -994,6 +999,38 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
     if (Platform.isAndroid && AndroidHelper.isPipMode) {
       plPlayerController.controls = false;
     }
+  }
+
+  void _syncDiagonalToastTransform(DiagonalRenderPlan? plan) {
+    final transform = plan == null
+        ? null
+        : DiagonalRenderOverlayTransform.fromPlan(plan);
+    if (DiagonalRenderToastTransform.same(
+      _lastDiagonalToastTransform,
+      transform,
+    )) {
+      return;
+    }
+    _lastDiagonalToastTransform = transform;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted && transform != null) {
+        return;
+      }
+      DiagonalRenderToastTransform.update(transform);
+    });
+  }
+
+  void _showCancelSeekToast() {
+    plPlayerController.hasToast = true;
+    _cancelSeekToastVisible.value = true;
+    _cancelSeekToastTimer?.cancel();
+    _cancelSeekToastTimer = Timer(const Duration(milliseconds: 1500), () {
+      if (!mounted) {
+        return;
+      }
+      _cancelSeekToastVisible.value = false;
+      plPlayerController.hasToast = null;
+    });
   }
 
   void _onPanStart(ScaleStartDetails details) {
@@ -1069,32 +1106,15 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
         plPlayerController.cancelSeek = true;
         plPlayerController.showPreview.value = false;
         if (plPlayerController.hasToast != true) {
-          plPlayerController.hasToast = true;
-          SmartDialog.showAttach(
-            targetContext: context,
-            alignment: Alignment.center,
-            animationTime: const Duration(milliseconds: 200),
-            animationType: SmartAnimationType.fade,
-            displayTime: const Duration(milliseconds: 1500),
-            maskColor: Colors.transparent,
-            builder: (context) => Container(
-              padding: const .symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                borderRadius: const .all(.circular(6)),
-                color: colorScheme.secondaryContainer,
-              ),
-              child: Text(
-                '松开手指，取消进退',
-                style: TextStyle(color: colorScheme.onSecondaryContainer),
-              ),
-            ),
-          );
+          _showCancelSeekToast();
         }
       } else {
         if (plPlayerController.cancelSeek == true) {
           plPlayerController
             ..cancelSeek = null
             ..hasToast = null;
+          _cancelSeekToastTimer?.cancel();
+          _cancelSeekToastVisible.value = false;
         }
       }
       plPlayerController
@@ -1341,6 +1361,8 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
         plPlayerController
           ..cancelSeek = null
           ..hasToast = null;
+        _cancelSeekToastTimer?.cancel();
+        _cancelSeekToastVisible.value = false;
       }
       plPlayerController
         ..onUpdatedSliderProgress(result)
@@ -1409,6 +1431,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
     );
     final isLive = plPlayerController.isLive;
     final diagonalRenderPlan = _resolveDiagonalRenderPlan();
+    _syncDiagonalToastTransform(diagonalRenderPlan);
 
     final child = Stack(
       fit: StackFit.passthrough,
@@ -1426,18 +1449,21 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
 
         if (widget.danmuWidget case final danmaku?)
           Positioned.fill(
-            child: _applyDiagonalRenderLayer(
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: danmaku,
+            child: _applyDiagonalDanmakuLayer(
+              DiagonalRenderScope(
+                danmakuPositionScale:
+                    diagonalRenderPlan?.danmakuPositionScale ?? 1.0,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: danmaku,
+                ),
               ),
               diagonalRenderPlan,
-              scale: diagonalRenderPlan?.scale,
             ),
           ),
 
         Positioned.fill(
-          child: _applyDiagonalRenderLayer(
+          child: _applyDiagonalInterfaceLayer(
             Stack(
               fit: StackFit.passthrough,
               children: <Widget>[
@@ -1571,6 +1597,31 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
               ),
             ),
           ),
+
+        /// 取消进退 toast
+        IgnorePointer(
+          ignoring: true,
+          child: Center(
+            child: Obx(
+              () => AnimatedOpacity(
+                curve: Curves.easeInOut,
+                opacity: _cancelSeekToastVisible.value ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 150),
+                child: Container(
+                  padding: const .symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    borderRadius: const .all(.circular(6)),
+                    color: colorScheme.secondaryContainer,
+                  ),
+                  child: Text(
+                    '松开手指，取消进退',
+                    style: TextStyle(color: colorScheme.onSecondaryContainer),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
 
         /// 音量🔊 控制条展示
         IgnorePointer(
@@ -2086,7 +2137,6 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
               ],
             ),
             diagonalRenderPlan,
-            scale: diagonalRenderPlan?.interfaceScale,
           ),
         ),
       ],
@@ -2157,6 +2207,41 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
           ..rotateZ(plan.rotationRadians),
         child: child,
       ),
+    );
+  }
+
+  Widget _applyDiagonalDanmakuLayer(
+    Widget child,
+    DiagonalRenderPlan? plan,
+  ) {
+    if (plan == null) {
+      return child;
+    }
+
+    return ClipRect(
+      child: Transform(
+        alignment: Alignment.center,
+        transform: Matrix4.identity()..rotateZ(plan.rotationRadians),
+        child: child,
+      ),
+    );
+  }
+
+  Widget _applyDiagonalInterfaceLayer(
+    Widget child,
+    DiagonalRenderPlan? plan,
+  ) {
+    if (plan == null) {
+      return child;
+    }
+
+    return _applyDiagonalRenderLayer(
+      Padding(
+        padding: plan.interfaceInsets,
+        child: child,
+      ),
+      plan,
+      scale: 1.0,
     );
   }
 

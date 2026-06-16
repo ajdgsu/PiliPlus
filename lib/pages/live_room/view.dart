@@ -31,8 +31,10 @@ import 'package:PiliPlus/pages/live_room/widgets/header_control.dart';
 import 'package:PiliPlus/pages/video/widgets/player_focus.dart';
 import 'package:PiliPlus/plugin/pl_player/controller.dart';
 import 'package:PiliPlus/plugin/pl_player/models/play_status.dart';
+import 'package:PiliPlus/plugin/pl_player/utils/diagonal_render.dart';
 import 'package:PiliPlus/plugin/pl_player/utils/danmaku_options.dart';
 import 'package:PiliPlus/plugin/pl_player/utils/fullscreen.dart';
+import 'package:PiliPlus/plugin/pl_player/utils/player_viewport.dart';
 import 'package:PiliPlus/plugin/pl_player/view/view.dart';
 import 'package:PiliPlus/services/service_locator.dart';
 import 'package:PiliPlus/utils/android/bindings.g.dart';
@@ -441,7 +443,13 @@ class _LiveRoomPageState extends State<LiveRoomPage>
   Widget _buildPH(bool isFullScreen) {
     final height = maxWidth / Style.aspectRatio16x9;
     final videoHeight = isFullScreen
-        ? maxHeight - (isWindowMode && !isPortrait ? 0 : padding.top)
+        ? playerViewportHeight(
+            maxHeight: maxHeight,
+            padding: padding,
+            isFullScreen: true,
+            isWindowMode: isWindowMode,
+            isPortrait: isPortrait,
+          )
         : height;
     final bottomHeight = maxHeight - padding.top - height - kToolbarHeight;
     return Column(
@@ -470,7 +478,13 @@ class _LiveRoomPageState extends State<LiveRoomPage>
   Widget _buildPP(bool isFullScreen) {
     final bottomHeight = 70 + padding.bottom;
     final videoHeight = isFullScreen
-        ? maxHeight - (isWindowMode && !isPortrait ? 0 : padding.top)
+        ? playerViewportHeight(
+            maxHeight: maxHeight,
+            padding: padding,
+            isFullScreen: true,
+            isWindowMode: isWindowMode,
+            isPortrait: isPortrait,
+          )
         : maxHeight - bottomHeight;
     return Stack(
       clipBehavior: Clip.none,
@@ -707,7 +721,13 @@ class _LiveRoomPageState extends State<LiveRoomPage>
     final videoHeight = maxHeight - padding.top - kToolbarHeight;
     final width = isFullScreen ? maxWidth : videoWidth;
     final height = isFullScreen
-        ? maxHeight - (isWindowMode && !isPortrait ? 0 : padding.top)
+        ? playerViewportHeight(
+            maxHeight: maxHeight,
+            padding: padding,
+            isFullScreen: true,
+            isWindowMode: isWindowMode,
+            isPortrait: isPortrait,
+          )
         : videoHeight;
     return Padding(
       padding: isFullScreen
@@ -1088,20 +1108,38 @@ class _LiveDanmakuState extends State<LiveDanmaku> {
 
   @override
   Widget build(BuildContext context) {
+    final positionScale = DiagonalRenderScope.danmakuPositionScaleOf(context);
+    final renderSize = Size(
+      widget.size.width * positionScale,
+      widget.size.height * positionScale,
+    );
     final option = DanmakuOptions.get(notFullscreen: widget.notFullscreen);
-    return Obx(
-      () => AnimatedOpacity(
-        opacity: plPlayerController.enableShowDanmaku.value
-            ? plPlayerController.danmakuOpacity.value
-            : 0,
-        duration: const Duration(milliseconds: 100),
-        child: DanmakuScreen<DanmakuExtra>(
-          createdController: (e) {
-            widget.liveRoomController.danmakuController =
-                plPlayerController.danmakuController = e;
-          },
-          option: option,
-          size: widget.size,
+    return SizedBox.expand(
+      child: OverflowBox(
+        alignment: Alignment.center,
+        minWidth: renderSize.width,
+        maxWidth: renderSize.width,
+        minHeight: renderSize.height,
+        maxHeight: renderSize.height,
+        child: SizedBox(
+          width: renderSize.width,
+          height: renderSize.height,
+          child: Obx(
+            () => AnimatedOpacity(
+              opacity: plPlayerController.enableShowDanmaku.value
+                  ? plPlayerController.danmakuOpacity.value
+                  : 0,
+              duration: const Duration(milliseconds: 100),
+              child: DanmakuScreen<DanmakuExtra>(
+                createdController: (e) {
+                  widget.liveRoomController.danmakuController =
+                      plPlayerController.danmakuController = e;
+                },
+                option: option,
+                size: renderSize,
+              ),
+            ),
+          ),
         ),
       ),
     );

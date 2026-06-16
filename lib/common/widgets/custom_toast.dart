@@ -1,3 +1,4 @@
+import 'package:PiliPlus/plugin/pl_player/utils/diagonal_render.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:flutter/material.dart';
 
@@ -11,10 +12,46 @@ class CustomToast extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = ColorScheme.of(context);
+    final bubble = _buildBubble(colorScheme);
+    return ValueListenableBuilder<DiagonalRenderOverlayTransform?>(
+      valueListenable: DiagonalRenderToastTransform.notifier,
+      child: bubble,
+      builder: (context, transform, child) {
+        final bottom = MediaQuery.viewPaddingOf(context).bottom + 30;
+        if (transform == null) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: bottom),
+            child: child!,
+          );
+        }
+
+        final size = MediaQuery.sizeOf(context);
+        return SizedBox(
+          width: size.width,
+          height: size.height,
+          child: ClipRect(
+            child: Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.identity()..rotateZ(transform.rotationRadians),
+              child: Padding(
+                padding: transform.interfaceInsets,
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: EdgeInsets.only(bottom: bottom),
+                    child: child!,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBubble(ColorScheme colorScheme) {
     return Container(
-      margin: .only(
-        bottom: MediaQuery.viewPaddingOf(context).bottom + 30,
-      ),
       padding: const .symmetric(horizontal: 17, vertical: 10),
       decoration: BoxDecoration(
         color: colorScheme.primaryContainer.withValues(alpha: toastOpacity),

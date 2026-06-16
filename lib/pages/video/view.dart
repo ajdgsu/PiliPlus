@@ -45,6 +45,7 @@ import 'package:PiliPlus/plugin/pl_player/models/fullscreen_mode.dart';
 import 'package:PiliPlus/plugin/pl_player/models/play_repeat.dart';
 import 'package:PiliPlus/plugin/pl_player/models/play_status.dart';
 import 'package:PiliPlus/plugin/pl_player/utils/fullscreen.dart';
+import 'package:PiliPlus/plugin/pl_player/utils/player_viewport.dart';
 import 'package:PiliPlus/plugin/pl_player/view/view.dart';
 import 'package:PiliPlus/services/service_locator.dart';
 import 'package:PiliPlus/services/shutdown_timer_service.dart'
@@ -525,7 +526,13 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
             onlyOneScrollInBody: true,
             pinnedHeaderSliverHeightBuilder: () {
               double pinnedHeight = this.isFullScreen || !isPortrait
-                  ? maxHeight - (isWindowMode && !isPortrait ? 0 : padding.top)
+                  ? playerViewportHeight(
+                      maxHeight: maxHeight,
+                      padding: padding,
+                      isFullScreen: this.isFullScreen,
+                      isWindowMode: isWindowMode,
+                      isPortrait: isPortrait,
+                    )
                   : videoDetailController.isExpanding ||
                         videoDetailController.isCollapsing
                   ? videoDetailController.animHeight
@@ -551,7 +558,13 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
             },
             headerSliverBuilder: (context, innerBoxIsScrolled) {
               final height = isFullScreen || !isPortrait
-                  ? maxHeight - (isWindowMode && !isPortrait ? 0 : padding.top)
+                  ? playerViewportHeight(
+                      maxHeight: maxHeight,
+                      padding: padding,
+                      isFullScreen: isFullScreen,
+                      isWindowMode: isWindowMode,
+                      isPortrait: isPortrait,
+                    )
                   : videoDetailController.isExpanding ||
                         videoDetailController.isCollapsing
                   ? videoDetailController.animHeight
@@ -801,10 +814,14 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
   );
 
   Widget childSplit(double ratio) {
-    final double videoHeight = maxHeight - padding.vertical;
+    final contentPadding = playerContentPadding(
+      padding: padding,
+      isFullScreen: isFullScreen,
+    );
+    final double videoHeight = maxHeight - contentPadding.vertical;
     final double width = videoHeight * ratio;
     final videoWidth = isFullScreen ? maxWidth : width;
-    final introWidth = maxWidth - width - padding.horizontal;
+    final introWidth = maxWidth - width - contentPadding.horizontal;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -855,11 +872,15 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
     if (enableVerticalExpand) {
       return Obx(() {
         if (videoDetailController.isVertical.value && !isPortrait) {
-          final double videoHeight = maxHeight - padding.vertical;
+          final contentPadding = playerContentPadding(
+            padding: padding,
+            isFullScreen: isFullScreen,
+          );
+          final double videoHeight = maxHeight - contentPadding.vertical;
           final double width = videoHeight / Style.aspectRatio16x9;
           final videoWidth = isFullScreen ? maxWidth : width;
-          final introWidth = (maxWidth - padding.horizontal - width) / 2;
-          final introHeight = maxHeight - padding.top;
+          final introWidth = (maxWidth - contentPadding.horizontal - width) / 2;
+          final introHeight = maxHeight - contentPadding.top;
           return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -928,7 +949,13 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
     final videoWidth = isFullScreen ? maxWidth : width;
     final double height = width / Style.aspectRatio16x9;
     final videoHeight = isFullScreen
-        ? maxHeight - (isWindowMode && !isPortrait ? 0 : padding.top)
+        ? playerViewportHeight(
+            maxHeight: maxHeight,
+            padding: padding,
+            isFullScreen: true,
+            isWindowMode: isWindowMode,
+            isPortrait: isPortrait,
+          )
         : height;
     if (height > maxHeight) {
       return childSplit(Style.aspectRatio16x9);
@@ -1054,7 +1081,13 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
     final shouldShowSeasonPanel = _shouldShowSeasonPanel;
     final double height = maxHeight / 2.5;
     final videoHeight = isFullScreen
-        ? maxHeight - (isWindowMode && !isPortrait ? 0 : padding.top)
+        ? playerViewportHeight(
+            maxHeight: maxHeight,
+            padding: padding,
+            isFullScreen: true,
+            isWindowMode: isWindowMode,
+            isPortrait: isPortrait,
+          )
         : height;
     final bottomHeight = maxHeight - height - padding.top;
     return Column(

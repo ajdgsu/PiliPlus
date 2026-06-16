@@ -5,6 +5,7 @@ import 'package:PiliPlus/pages/danmaku/controller.dart';
 import 'package:PiliPlus/pages/danmaku/danmaku_model.dart';
 import 'package:PiliPlus/plugin/pl_player/controller.dart';
 import 'package:PiliPlus/plugin/pl_player/models/play_status.dart';
+import 'package:PiliPlus/plugin/pl_player/utils/diagonal_render.dart';
 import 'package:PiliPlus/plugin/pl_player/utils/danmaku_options.dart';
 import 'package:PiliPlus/utils/danmaku_utils.dart';
 import 'package:canvas_danmaku/canvas_danmaku.dart';
@@ -167,22 +168,40 @@ class _PlDanmakuState extends State<PlDanmaku> {
 
   @override
   Widget build(BuildContext context) {
+    final positionScale = DiagonalRenderScope.danmakuPositionScaleOf(context);
+    final renderSize = Size(
+      widget.size.width * positionScale,
+      widget.size.height * positionScale,
+    );
     final option = DanmakuOptions.get(
       notFullscreen: widget.notFullscreen,
       speed: playerController.playbackSpeed,
     );
-    return Obx(
-      () => AnimatedOpacity(
-        opacity: playerController.enableShowDanmaku.value
-            ? playerController.danmakuOpacity.value
-            : 0,
-        duration: const Duration(milliseconds: 100),
-        child: DanmakuScreen<DanmakuExtra>(
-          createdController: (e) {
-            playerController.danmakuController = _controller = e;
-          },
-          option: option,
-          size: widget.size,
+    return SizedBox.expand(
+      child: OverflowBox(
+        alignment: Alignment.center,
+        minWidth: renderSize.width,
+        maxWidth: renderSize.width,
+        minHeight: renderSize.height,
+        maxHeight: renderSize.height,
+        child: SizedBox(
+          width: renderSize.width,
+          height: renderSize.height,
+          child: Obx(
+            () => AnimatedOpacity(
+              opacity: playerController.enableShowDanmaku.value
+                  ? playerController.danmakuOpacity.value
+                  : 0,
+              duration: const Duration(milliseconds: 100),
+              child: DanmakuScreen<DanmakuExtra>(
+                createdController: (e) {
+                  playerController.danmakuController = _controller = e;
+                },
+                option: option,
+                size: renderSize,
+              ),
+            ),
+          ),
         ),
       ),
     );

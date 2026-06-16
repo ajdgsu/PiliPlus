@@ -1022,7 +1022,7 @@ abstract final class Pref {
           .toDouble());
 
   static double get diagonalRenderScale =>
-      ((_setting.get(SettingBoxKey.diagonalRenderScale, defaultValue: 50.0)
+      ((_setting.get(SettingBoxKey.diagonalRenderScale, defaultValue: 15.0)
               as num)
           .clamp(0.0, 100.0)
           .toDouble());

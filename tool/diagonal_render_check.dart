@@ -161,6 +161,36 @@ void main() {
     expect(plan.maxInterfaceScale, closeTo(0.6886, 0.0001));
   });
 
+  test('creates an inset interface layout that fits after rotation', () {
+    final geometry = DiagonalRenderGeometryCache.resolveForSize(
+      const Size(2248, 2480),
+    );
+    final plan = geometry.planFor(
+      viewportSize: const Size(2480, 2248),
+      videoAspectRatio: 16 / 9,
+      fit: BoxFit.contain,
+      clockwise: true,
+      angleOffsetDegrees: 0,
+      scaleSliderValue: 50,
+    )!;
+
+    final insets = plan.interfaceInsets;
+    final safeWidth = plan.viewportSize.width - insets.left - insets.right;
+    final safeHeight = plan.viewportSize.height - insets.top - insets.bottom;
+    final cosTheta = math.cos(plan.rotationRadians).abs();
+    final sinTheta = math.sin(plan.rotationRadians).abs();
+    final rotatedSafeWidth = safeWidth * cosTheta + safeHeight * sinTheta;
+    final rotatedSafeHeight = safeWidth * sinTheta + safeHeight * cosTheta;
+
+    expect(insets.left, closeTo(insets.right, 1e-9));
+    expect(insets.top, closeTo(insets.bottom, 1e-9));
+    expect(rotatedSafeWidth, lessThanOrEqualTo(plan.viewportSize.width + 1e-9));
+    expect(
+      rotatedSafeHeight,
+      lessThanOrEqualTo(plan.viewportSize.height + 1e-9),
+    );
+  });
+
   test('keeps interface scale aligned with video when it is already safe', () {
     final geometry = DiagonalRenderGeometryCache.resolveForSize(
       const Size(2248, 2480),
