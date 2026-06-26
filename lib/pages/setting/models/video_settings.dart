@@ -17,7 +17,8 @@ import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:PiliPlus/utils/video_utils.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show FilteringTextInputFormatter;
+import 'package:flutter/services.dart'
+    show FilteringTextInputFormatter, TextInputType;
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
@@ -164,6 +165,12 @@ List<SettingsModel> get videoSettings => [
     leading: const Icon(Icons.sync_rounded),
     getSubtitle: () => '当前：${Pref.autosync}（此项即mpv的--autosync）',
     onTap: _showAutoSyncDialog,
+  ),
+  NormalModel(
+    title: '音频延迟',
+    leading: const Icon(Icons.graphic_eq_outlined),
+    getSubtitle: () => '当前：${Pref.audioDelay}ms（此项即mpv的--audio-delay）',
+    onTap: _showAudioDelayDialog,
   ),
   NormalModel(
     title: '视频同步',
@@ -491,6 +498,52 @@ void _showAutoSyncDialog(BuildContext context, VoidCallback setState) {
               int.parse(autosync);
               Get.back();
               await GStorage.setting.put(SettingBoxKey.autosync, autosync);
+              setState();
+            } catch (e) {
+              SmartDialog.showToast(e.toString());
+            }
+          },
+          child: const Text('确定'),
+        ),
+      ],
+    ),
+  );
+}
+
+void _showAudioDelayDialog(BuildContext context, VoidCallback setState) {
+  String audioDelay = Pref.audioDelay;
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('音频延迟'),
+      content: TextFormField(
+        autofocus: true,
+        initialValue: audioDelay,
+        keyboardType: const TextInputType.numberWithOptions(signed: true),
+        onChanged: (value) => audioDelay = value,
+        inputFormatters: [
+          FilteringTextInputFormatter.allow(RegExp(r'[-\d]+')),
+        ],
+        decoration: const InputDecoration(suffixText: 'ms'),
+      ),
+      actions: [
+        TextButton(
+          onPressed: Get.back,
+          child: Text(
+            '取消',
+            style: TextStyle(color: ColorScheme.of(context).outline),
+          ),
+        ),
+        TextButton(
+          onPressed: () async {
+            try {
+              // validate
+              int.parse(audioDelay);
+              Get.back();
+              await GStorage.setting.put(
+                SettingBoxKey.audioDelay,
+                audioDelay,
+              );
               setState();
             } catch (e) {
               SmartDialog.showToast(e.toString());

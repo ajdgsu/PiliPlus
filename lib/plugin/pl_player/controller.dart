@@ -781,6 +781,10 @@ class PlPlayerController with BlockConfigMixin {
     if (autosync != '0') {
       opt['autosync'] = autosync;
     }
+    final audioDelay = int.parse(Pref.audioDelay);
+    if (audioDelay != 0) {
+      opt['audio-delay'] = (audioDelay / 1000).toStringAsFixed(3);
+    }
 
     final player = await Player.create(
       configuration: PlayerConfiguration(
