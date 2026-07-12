@@ -32,15 +32,19 @@ class CustomToast extends StatelessWidget {
           child: ClipRect(
             child: Transform(
               alignment: Alignment.center,
-              transform: Matrix4.identity()..rotateZ(transform.rotationRadians),
-              child: Padding(
-                padding: transform.interfaceInsets,
-                child: Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    padding: EdgeInsets.only(bottom: bottom),
-                    child: child!,
-                  ),
+              transform: Matrix4.identity()
+                ..scaleByDouble(
+                  transform.interfaceScale,
+                  transform.interfaceScale,
+                  transform.interfaceScale,
+                  1,
+                )
+                ..rotateZ(transform.rotationRadians),
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: bottom),
+                  child: child!,
                 ),
               ),
             ),

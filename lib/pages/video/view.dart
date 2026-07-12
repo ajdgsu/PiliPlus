@@ -476,9 +476,10 @@ class _VideoDetailPageVState extends State<VideoDetailPageV>
         : Theme.of(context);
   }
 
-  bool removeAppBar(bool isFullScreen) =>
-      videoDetailController.removeSafeArea ||
-      (isWindowMode && isFullScreen && !isPortrait);
+  bool removeAppBar(bool isFullScreen) => shouldRemovePlayerAppBar(
+    removeSafeArea: videoDetailController.removeSafeArea,
+    isFullScreen: isFullScreen,
+  );
 
   Widget get childWhenDisabled {
     return Obx(

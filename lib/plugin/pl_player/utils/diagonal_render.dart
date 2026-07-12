@@ -5,11 +5,13 @@ import 'package:flutter/widgets.dart'
     show
         BoxFit,
         BuildContext,
-        EdgeInsets,
         InheritedWidget,
         Offset,
         Size,
         WidgetsBinding;
+
+double diagonalDanmakuAlignmentY(double normalizedOffset) =>
+    1.0 - normalizedOffset.clamp(0.0, 1.0).toDouble() * 2.0;
 
 final class DiagonalRenderPlan {
   const DiagonalRenderPlan({
@@ -41,50 +43,50 @@ final class DiagonalRenderPlan {
   double get balancedAngleDegrees => balancedAngleRadians * 180 / math.pi;
 
   double get danmakuPositionScale => scale.isFinite && scale > 0 ? scale : 1.0;
-
-  EdgeInsets get interfaceInsets {
-    final safeScale = maxInterfaceScale.clamp(0.0, 1.0).toDouble();
-    if (safeScale >= 1.0) {
-      return EdgeInsets.zero;
-    }
-    return EdgeInsets.symmetric(
-      horizontal: viewportSize.width * (1.0 - safeScale) / 2,
-      vertical: viewportSize.height * (1.0 - safeScale) / 2,
-    );
-  }
 }
 
 final class DiagonalRenderOverlayTransform {
   const DiagonalRenderOverlayTransform({
     required this.viewportSize,
     required this.rotationRadians,
-    required this.interfaceInsets,
+    required this.interfaceScale,
   });
 
   factory DiagonalRenderOverlayTransform.fromPlan(DiagonalRenderPlan plan) {
     return DiagonalRenderOverlayTransform(
       viewportSize: plan.viewportSize,
       rotationRadians: plan.rotationRadians,
-      interfaceInsets: plan.interfaceInsets,
+      interfaceScale: plan.interfaceScale,
     );
   }
 
   final Size viewportSize;
   final double rotationRadians;
-  final EdgeInsets interfaceInsets;
+  final double interfaceScale;
 }
 
 abstract final class DiagonalRenderToastTransform {
   static final ValueNotifier<DiagonalRenderOverlayTransform?> notifier =
       ValueNotifier(null);
+  static Object? _owner;
 
   static DiagonalRenderOverlayTransform? get value => notifier.value;
 
-  static void update(DiagonalRenderOverlayTransform? transform) {
+  static void update(
+    DiagonalRenderOverlayTransform? transform, {
+    required Object owner,
+  }) {
+    _owner = owner;
     if (same(value, transform)) {
       return;
     }
     notifier.value = transform;
+  }
+
+  static void clear(Object owner) {
+    if (!identical(_owner, owner)) return;
+    _owner = null;
+    notifier.value = null;
   }
 
   static bool same(
@@ -100,10 +102,7 @@ abstract final class DiagonalRenderToastTransform {
     return _close(a.viewportSize.width, b.viewportSize.width) &&
         _close(a.viewportSize.height, b.viewportSize.height) &&
         _close(a.rotationRadians, b.rotationRadians) &&
-        _close(a.interfaceInsets.left, b.interfaceInsets.left) &&
-        _close(a.interfaceInsets.top, b.interfaceInsets.top) &&
-        _close(a.interfaceInsets.right, b.interfaceInsets.right) &&
-        _close(a.interfaceInsets.bottom, b.interfaceInsets.bottom);
+        _close(a.interfaceScale, b.interfaceScale);
   }
 
   static bool _close(double a, double b) => (a - b).abs() < 1e-6;
@@ -113,10 +112,12 @@ class DiagonalRenderScope extends InheritedWidget {
   const DiagonalRenderScope({
     super.key,
     required this.danmakuPositionScale,
+    required this.danmakuVerticalOffset,
     required super.child,
   });
 
   final double danmakuPositionScale;
+  final double danmakuVerticalOffset;
 
   static double danmakuPositionScaleOf(BuildContext context) {
     final scope = context
@@ -124,9 +125,16 @@ class DiagonalRenderScope extends InheritedWidget {
     return scope?.danmakuPositionScale ?? 1.0;
   }
 
+  static double danmakuVerticalOffsetOf(BuildContext context) {
+    final scope = context
+        .dependOnInheritedWidgetOfExactType<DiagonalRenderScope>();
+    return scope?.danmakuVerticalOffset ?? 0.5;
+  }
+
   @override
   bool updateShouldNotify(covariant DiagonalRenderScope oldWidget) {
-    return danmakuPositionScale != oldWidget.danmakuPositionScale;
+    return danmakuPositionScale != oldWidget.danmakuPositionScale ||
+        danmakuVerticalOffset != oldWidget.danmakuVerticalOffset;
   }
 }
 

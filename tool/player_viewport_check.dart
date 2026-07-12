@@ -15,6 +15,17 @@ void main() {
     );
 
     expect(fullHeight, 1000);
+
+    expect(
+      playerViewportHeight(
+        maxHeight: 1000,
+        padding: padding,
+        isFullScreen: true,
+        isWindowMode: true,
+        isPortrait: false,
+      ),
+      1000,
+    );
   });
 
   test('embedded viewport preserves existing safe-area behavior', () {
@@ -47,6 +58,30 @@ void main() {
     expect(
       playerContentPadding(padding: padding, isFullScreen: false),
       padding,
+    );
+  });
+
+  test('fullscreen always removes the safe-area AppBar', () {
+    expect(
+      shouldRemovePlayerAppBar(
+        removeSafeArea: false,
+        isFullScreen: true,
+      ),
+      isTrue,
+    );
+    expect(
+      shouldRemovePlayerAppBar(
+        removeSafeArea: false,
+        isFullScreen: false,
+      ),
+      isFalse,
+    );
+    expect(
+      shouldRemovePlayerAppBar(
+        removeSafeArea: true,
+        isFullScreen: false,
+      ),
+      isTrue,
     );
   });
 }

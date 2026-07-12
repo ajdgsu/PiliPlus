@@ -160,7 +160,8 @@ abstract final class SettingBoxKey {
       enableDiagonalRender = 'enableDiagonalRender',
       diagonalRenderClockwise = 'diagonalRenderClockwise',
       diagonalRenderAngleOffset = 'diagonalRenderAngleOffset',
-      diagonalRenderScale = 'diagonalRenderScale';
+      diagonalRenderScale = 'diagonalRenderScale',
+      diagonalDanmakuVerticalOffset = 'diagonalDanmakuVerticalOffset';
 
   static const String minimizeOnExit = 'minimizeOnExit',
       windowSize = 'windowSize',
@@ -208,6 +209,7 @@ abstract final class SettingBoxKey {
       danmakuFontScaleFS = 'danmakuFontScaleFS',
       danmakuDuration = 'danmakuDuration',
       danmakuStaticDuration = 'danmakuStaticDuration',
+      syncDanmakuPlaybackSpeed = 'syncDanmakuPlaybackSpeed',
       danmakuMassiveMode = 'danmakuMassiveMode',
       danmakuFixedV = 'danmakuFixedV',
       danmakuStatic2Scroll = 'danmakuStatic2Scroll',

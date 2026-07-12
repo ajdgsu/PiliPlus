@@ -11,6 +11,7 @@ class SliderDialog extends StatefulWidget {
     this.divisions,
     this.suffix = '',
     this.precise = 1,
+    this.manualInput = false,
   });
 
   final double value;
@@ -20,6 +21,7 @@ class SliderDialog extends StatefulWidget {
   final int? divisions;
   final String suffix;
   final int precise;
+  final bool manualInput;
 
   @override
   State<SliderDialog> createState() => _SliderDialogState();
@@ -27,11 +29,36 @@ class SliderDialog extends StatefulWidget {
 
 class _SliderDialogState extends State<SliderDialog> {
   late double _tempValue;
+  late final TextEditingController _inputController;
+  String? _inputError;
 
   @override
   void initState() {
     super.initState();
     _tempValue = widget.value;
+    _inputController = TextEditingController(
+      text: widget.value.toStringAsFixed(widget.precise),
+    );
+  }
+
+  @override
+  void dispose() {
+    _inputController.dispose();
+    super.dispose();
+  }
+
+  void _setInput(String text) {
+    final value = double.tryParse(text);
+    final valid = value != null &&
+        value.isFinite &&
+        value >= widget.min &&
+        value <= widget.max;
+    setState(() {
+      _inputError = valid ? null : '请输入 ${widget.min}~${widget.max} 范围内的数字';
+      if (valid) {
+        _tempValue = value!.toPrecision(widget.precise);
+      }
+    });
   }
 
   @override
@@ -40,19 +67,39 @@ class _SliderDialogState extends State<SliderDialog> {
       title: widget.title,
       contentPadding: const .only(top: 20, left: 8, right: 8, bottom: 8),
       content: SizedBox(
-        height: 40,
-        child: Slider(
-          value: _tempValue,
-          min: widget.min,
-          max: widget.max,
-          divisions: widget.divisions,
-          label:
-              '${_tempValue.toStringAsFixed(widget.precise)}${widget.suffix}',
-          onChanged: (double value) {
-            setState(() {
-              _tempValue = value.toPrecision(widget.precise);
-            });
-          },
+        height: widget.manualInput ? 120 : 40,
+        child: Column(
+          children: [
+            Slider(
+              value: _tempValue,
+              min: widget.min,
+              max: widget.max,
+              divisions: widget.divisions,
+              label:
+                  '${_tempValue.toStringAsFixed(widget.precise)}${widget.suffix}',
+              onChanged: (double value) {
+                setState(() {
+                  _tempValue = value.toPrecision(widget.precise);
+                  _inputController.text =
+                      _tempValue.toStringAsFixed(widget.precise);
+                  _inputError = null;
+                });
+              },
+            ),
+            if (widget.manualInput)
+              TextField(
+                controller: _inputController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                  signed: true,
+                ),
+                decoration: InputDecoration(
+                  labelText: '手动输入',
+                  errorText: _inputError,
+                ),
+                onChanged: _setInput,
+              ),
+          ],
         ),
       ),
       actions: [
@@ -64,7 +111,9 @@ class _SliderDialogState extends State<SliderDialog> {
           ),
         ),
         TextButton(
-          onPressed: () => Navigator.pop(context, _tempValue),
+          onPressed: _inputError == null
+              ? () => Navigator.pop(context, _tempValue)
+              : null,
           child: const Text('确定'),
         ),
       ],

@@ -19,3 +19,10 @@ EdgeInsets playerContentPadding({
 }) {
   return isFullScreen ? EdgeInsets.zero : padding;
 }
+
+bool shouldRemovePlayerAppBar({
+  required bool removeSafeArea,
+  required bool isFullScreen,
+}) {
+  return removeSafeArea || isFullScreen;
+}

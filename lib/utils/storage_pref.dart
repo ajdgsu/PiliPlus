@@ -1030,6 +1030,20 @@ abstract final class Pref {
           .clamp(0.0, 100.0)
           .toDouble());
 
+  static double get diagonalDanmakuVerticalOffset =>
+      ((_setting.get(
+                SettingBoxKey.diagonalDanmakuVerticalOffset,
+                defaultValue: 0.5,
+              )
+              as num)
+          .clamp(0.0, 1.0)
+          .toDouble());
+
+  static bool get syncDanmakuPlaybackSpeed => _setting.get(
+    SettingBoxKey.syncDanmakuPlaybackSpeed,
+    defaultValue: true,
+  );
+
   static double get playerVolume => // mobile
       _setting.get(SettingBoxKey.playerVolume, defaultValue: 100.0);
 

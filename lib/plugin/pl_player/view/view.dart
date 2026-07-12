@@ -164,6 +164,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
     SettingBoxKey.diagonalRenderClockwise,
     SettingBoxKey.diagonalRenderAngleOffset,
     SettingBoxKey.diagonalRenderScale,
+    SettingBoxKey.diagonalDanmakuVerticalOffset,
   };
 
   void _onBrightnessChanged(double value) {
@@ -422,7 +423,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
     _videoSizeListener?.cancel();
     _diagonalRenderSettingsListener?.cancel();
     _cancelSeekToastTimer?.cancel();
-    DiagonalRenderToastTransform.update(null);
+    DiagonalRenderToastTransform.clear(this);
     _animationController.dispose();
     _transformationController.dispose();
     _removeDmAction();
@@ -1013,10 +1014,8 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
     }
     _lastDiagonalToastTransform = transform;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted && transform != null) {
-        return;
-      }
-      DiagonalRenderToastTransform.update(transform);
+      if (!mounted) return;
+      DiagonalRenderToastTransform.update(transform, owner: this);
     });
   }
 
@@ -1453,6 +1452,9 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
               DiagonalRenderScope(
                 danmakuPositionScale:
                     diagonalRenderPlan?.danmakuPositionScale ?? 1.0,
+                danmakuVerticalOffset: diagonalRenderPlan == null
+                    ? 0.5
+                    : Pref.diagonalDanmakuVerticalOffset,
                 child: Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: danmaku,
@@ -2235,14 +2237,7 @@ class _PLVideoPlayerState extends State<PLVideoPlayer>
       return child;
     }
 
-    return _applyDiagonalRenderLayer(
-      Padding(
-        padding: plan.interfaceInsets,
-        child: child,
-      ),
-      plan,
-      scale: 1.0,
-    );
+    return _applyDiagonalRenderLayer(child, plan, scale: plan.interfaceScale);
   }
 
   double? _diagonalRenderVideoAspectRatio(VideoFitType videoFit) {

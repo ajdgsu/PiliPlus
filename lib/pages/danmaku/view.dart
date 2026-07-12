@@ -74,7 +74,10 @@ class _PlDanmakuState extends State<PlDanmaku> {
     if (oldWidget.notFullscreen != widget.notFullscreen &&
         !DanmakuOptions.sameFontScale) {
       _controller?.updateOption(
-        DanmakuOptions.get(notFullscreen: widget.notFullscreen),
+        DanmakuOptions.get(
+          notFullscreen: widget.notFullscreen,
+          speed: playerController.playbackSpeed,
+        ),
       );
     }
   }
@@ -169,6 +172,8 @@ class _PlDanmakuState extends State<PlDanmaku> {
   @override
   Widget build(BuildContext context) {
     final positionScale = DiagonalRenderScope.danmakuPositionScaleOf(context);
+    final verticalOffset =
+        DiagonalRenderScope.danmakuVerticalOffsetOf(context);
     final renderSize = Size(
       widget.size.width * positionScale,
       widget.size.height * positionScale,
@@ -179,7 +184,7 @@ class _PlDanmakuState extends State<PlDanmaku> {
     );
     return SizedBox.expand(
       child: OverflowBox(
-        alignment: Alignment.center,
+        alignment: Alignment(0, diagonalDanmakuAlignmentY(verticalOffset)),
         minWidth: renderSize.width,
         maxWidth: renderSize.width,
         minHeight: renderSize.height,

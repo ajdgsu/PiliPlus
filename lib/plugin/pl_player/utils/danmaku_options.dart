@@ -4,6 +4,32 @@ import 'package:PiliPlus/utils/storage_key.dart';
 import 'package:PiliPlus/utils/storage_pref.dart';
 import 'package:canvas_danmaku/canvas_danmaku.dart';
 
+double resolveDanmakuPlaybackSpeed({
+  required double playbackSpeed,
+  required bool syncEnabled,
+}) {
+  if (!syncEnabled || !playbackSpeed.isFinite || playbackSpeed <= 0) {
+    return 1.0;
+  }
+  return playbackSpeed;
+}
+
+({double duration, double staticDuration}) resolveDanmakuDurations({
+  required double baseDuration,
+  required double baseStaticDuration,
+  required double playbackSpeed,
+  required bool syncEnabled,
+}) {
+  final speed = resolveDanmakuPlaybackSpeed(
+    playbackSpeed: playbackSpeed,
+    syncEnabled: syncEnabled,
+  );
+  return (
+    duration: baseDuration / speed,
+    staticDuration: baseStaticDuration / speed,
+  );
+}
+
 abstract final class DanmakuOptions {
   static final Set<int> blockTypes = Pref.danmakuBlockType;
   static bool blockColorful = blockTypes.contains(6);
@@ -23,16 +49,38 @@ abstract final class DanmakuOptions {
 
   static bool get sameFontScale => danmakuFontScale == danmakuFontScaleFS;
 
+  static DanmakuOption applyPlaybackSpeed(
+    DanmakuOption option,
+    double playbackSpeed,
+  ) {
+    final durations = resolveDanmakuDurations(
+      baseDuration: danmakuDuration,
+      baseStaticDuration: danmakuStaticDuration,
+      playbackSpeed: playbackSpeed,
+      syncEnabled: Pref.syncDanmakuPlaybackSpeed,
+    );
+    return option.copyWith(
+      duration: durations.duration,
+      staticDuration: durations.staticDuration,
+    );
+  }
+
   static DanmakuOption get({
     required bool notFullscreen,
     double speed = 1.0,
   }) {
+    final durations = resolveDanmakuDurations(
+      baseDuration: danmakuDuration,
+      baseStaticDuration: danmakuStaticDuration,
+      playbackSpeed: speed,
+      syncEnabled: Pref.syncDanmakuPlaybackSpeed,
+    );
     return DanmakuOption(
       fontSize: 15 * (notFullscreen ? danmakuFontScale : danmakuFontScaleFS),
       fontWeight: danmakuFontWeight,
       area: danmakuShowArea,
-      duration: danmakuDuration / speed,
-      staticDuration: danmakuStaticDuration / speed,
+      duration: durations.duration,
+      staticDuration: durations.staticDuration,
       hideBottom: blockTypes.contains(4),
       hideScroll: blockTypes.contains(2),
       hideTop: blockTypes.contains(5),

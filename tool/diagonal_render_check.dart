@@ -161,7 +161,7 @@ void main() {
     expect(plan.maxInterfaceScale, closeTo(0.6886, 0.0001));
   });
 
-  test('creates an inset interface layout that fits after rotation', () {
+  test('uses centered interface scaling for the rotated interface layer', () {
     final geometry = DiagonalRenderGeometryCache.resolveForSize(
       const Size(2248, 2480),
     );
@@ -174,21 +174,20 @@ void main() {
       scaleSliderValue: 50,
     )!;
 
-    final insets = plan.interfaceInsets;
-    final safeWidth = plan.viewportSize.width - insets.left - insets.right;
-    final safeHeight = plan.viewportSize.height - insets.top - insets.bottom;
     final cosTheta = math.cos(plan.rotationRadians).abs();
     final sinTheta = math.sin(plan.rotationRadians).abs();
-    final rotatedSafeWidth = safeWidth * cosTheta + safeHeight * sinTheta;
-    final rotatedSafeHeight = safeWidth * sinTheta + safeHeight * cosTheta;
+    final rotatedWidth =
+        plan.interfaceScale *
+        (plan.viewportSize.width * cosTheta +
+            plan.viewportSize.height * sinTheta);
+    final rotatedHeight =
+        plan.interfaceScale *
+        (plan.viewportSize.width * sinTheta +
+            plan.viewportSize.height * cosTheta);
 
-    expect(insets.left, closeTo(insets.right, 1e-9));
-    expect(insets.top, closeTo(insets.bottom, 1e-9));
-    expect(rotatedSafeWidth, lessThanOrEqualTo(plan.viewportSize.width + 1e-9));
-    expect(
-      rotatedSafeHeight,
-      lessThanOrEqualTo(plan.viewportSize.height + 1e-9),
-    );
+    expect(plan.interfaceScale, greaterThan(0));
+    expect(rotatedWidth, lessThanOrEqualTo(plan.viewportSize.width + 1e-9));
+    expect(rotatedHeight, lessThanOrEqualTo(plan.viewportSize.height + 1e-9));
   });
 
   test('keeps interface scale aligned with video when it is already safe', () {
@@ -206,6 +205,53 @@ void main() {
 
     expect(plan.scale, lessThan(plan.maxInterfaceScale));
     expect(plan.interfaceScale, plan.scale);
+  });
+
+  test('maps diagonal danmaku offset from top through center to bottom', () {
+    expect(diagonalDanmakuAlignmentY(1.0), -1.0);
+    expect(diagonalDanmakuAlignmentY(0.5), 0.0);
+    expect(diagonalDanmakuAlignmentY(0.0), 1.0);
+    expect(diagonalDanmakuAlignmentY(2.0), -1.0);
+  });
+
+  test('publishes centered scale for diagonal overlay transforms', () {
+    final geometry = DiagonalRenderGeometryCache.resolveForSize(
+      const Size(2248, 2480),
+    );
+    final plan = geometry.planFor(
+      viewportSize: const Size(2480, 2248),
+      videoAspectRatio: 16 / 9,
+      fit: BoxFit.contain,
+      clockwise: true,
+      angleOffsetDegrees: 0,
+      scaleSliderValue: 50,
+    )!;
+    final transform = DiagonalRenderOverlayTransform.fromPlan(plan);
+
+    expect(transform.interfaceScale, plan.interfaceScale);
+    expect(transform.rotationRadians, plan.rotationRadians);
+  });
+
+  test('only the current player owns the global overlay transform', () {
+    final ownerA = Object();
+    final ownerB = Object();
+    const transformA = DiagonalRenderOverlayTransform(
+      viewportSize: Size(100, 100),
+      rotationRadians: 0.5,
+      interfaceScale: 0.7,
+    );
+    const transformB = DiagonalRenderOverlayTransform(
+      viewportSize: Size(100, 100),
+      rotationRadians: 0.5,
+      interfaceScale: 0.7,
+    );
+
+    DiagonalRenderToastTransform.update(transformA, owner: ownerA);
+    DiagonalRenderToastTransform.update(transformB, owner: ownerB);
+    DiagonalRenderToastTransform.clear(ownerA);
+    expect(DiagonalRenderToastTransform.value, isNotNull);
+    DiagonalRenderToastTransform.clear(ownerB);
+    expect(DiagonalRenderToastTransform.value, isNull);
   });
 
   test('angle offset changes rotation but not scale', () {

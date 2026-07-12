@@ -44,6 +44,13 @@ List<SettingsModel> get playSettings => [
     title: '倍速设置',
     subtitle: '设置视频播放速度',
   ),
+  const SwitchModel(
+    title: '弹幕跟随视频倍速',
+    subtitle: '关闭后弹幕始终使用基础滚动和静态时长',
+    leading: Icon(Icons.speed_outlined),
+    setKey: SettingBoxKey.syncDanmakuPlaybackSpeed,
+    defaultVal: true,
+  ),
   if (Platform.isAndroid) ...[
     NormalModel(
       onTap: _showAngleDegreesDialog,
@@ -76,6 +83,13 @@ List<SettingsModel> get playSettings => [
       leading: const Icon(Icons.zoom_out_map_outlined),
       title: '视频缩放倍率',
       getSubtitle: () => '当前:「${_formatDiagonalRenderScale()}」',
+    ),
+    NormalModel(
+      onTap: _showDiagonalDanmakuVerticalOffsetDialog,
+      leading: const Icon(Icons.swap_vert),
+      title: '弹幕上下偏移',
+      getSubtitle: () =>
+          '当前:「${Pref.diagonalDanmakuVerticalOffset.toStringAsFixed(2)}」',
     ),
   ],
   const SwitchModel(
@@ -492,6 +506,31 @@ Future<void> _showDiagonalRenderScaleDialog(
   );
   if (res != null) {
     await GStorage.setting.put(SettingBoxKey.diagonalRenderScale, res);
+    setState();
+  }
+}
+
+Future<void> _showDiagonalDanmakuVerticalOffsetDialog(
+  BuildContext context,
+  VoidCallback setState,
+) async {
+  final res = await showDialog<double>(
+    context: context,
+    builder: (context) => SliderDialog(
+      title: const Text('弹幕上下偏移'),
+      min: 0.0,
+      max: 1.0,
+      divisions: 100,
+      precise: 2,
+      value: Pref.diagonalDanmakuVerticalOffset,
+      manualInput: true,
+    ),
+  );
+  if (res != null) {
+    await GStorage.setting.put(
+      SettingBoxKey.diagonalDanmakuVerticalOffset,
+      res.clamp(0.0, 1.0),
+    );
     setState();
   }
 }

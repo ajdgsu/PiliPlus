@@ -30,6 +30,7 @@ import 'package:PiliPlus/plugin/pl_player/models/play_repeat.dart';
 import 'package:PiliPlus/plugin/pl_player/models/play_status.dart';
 import 'package:PiliPlus/plugin/pl_player/models/video_fit_type.dart';
 import 'package:PiliPlus/plugin/pl_player/utils/fullscreen.dart';
+import 'package:PiliPlus/plugin/pl_player/utils/danmaku_options.dart';
 import 'package:PiliPlus/services/service_locator.dart';
 import 'package:PiliPlus/utils/accounts.dart';
 import 'package:PiliPlus/utils/android/android_helper.dart';
@@ -517,6 +518,7 @@ class PlPlayerController with BlockConfigMixin {
   DeviceOrientation? _orientation;
   late final checkIsAutoRotate = Platform.isAndroid && mode != .gravity;
   StreamSubscription<OrientationParams>? _orientationListener;
+  StreamSubscription<BoxEvent>? _danmakuSpeedPolicyListener;
 
   void _stopOrientationListener() {
     _orientationListener?.cancel();
@@ -968,6 +970,11 @@ class PlPlayerController with BlockConfigMixin {
   void _startListeners(NativePlayer player) {
     assert(_subscriptions == null);
     final stream = player.stream;
+    _danmakuSpeedPolicyListener = setting.watch().listen((event) {
+      if (event.key == SettingBoxKey.syncDanmakuPlaybackSpeed) {
+        _updateDanmakuSpeedPolicy();
+      }
+    });
     _subscriptions = [
       stream.playing.listen((event) {
         WakelockPlus.toggle(enable: event);
@@ -1118,6 +1125,18 @@ class PlPlayerController with BlockConfigMixin {
     _subscriptions?.forEach((e) => e.cancel());
     _subscriptions?.clear();
     _subscriptions = null;
+    _danmakuSpeedPolicyListener?.cancel();
+    _danmakuSpeedPolicyListener = null;
+  }
+
+  void _updateDanmakuSpeedPolicy() {
+    final controller = danmakuController;
+    if (controller == null) return;
+    try {
+      controller.updateOption(
+        DanmakuOptions.applyPlaybackSpeed(controller.option, playbackSpeed),
+      );
+    } catch (_) {}
   }
 
   void _cancelSubForSeek() {
@@ -1170,33 +1189,17 @@ class PlPlayerController with BlockConfigMixin {
   /// 设置倍速
   Future<void> setPlaybackSpeed(double speed) async {
     lastPlaybackSpeed = playbackSpeed;
-
-    if (speed == _videoPlayerController?.state.rate) {
-      return;
+    if (speed != _videoPlayerController?.state.rate) {
+      await _videoPlayerController?.setRate(speed);
     }
-
-    await _videoPlayerController?.setRate(speed);
     _playbackSpeed.value = speed;
-    if (danmakuController != null) {
-      try {
-        DanmakuOption currentOption = danmakuController!.option;
-        double defaultDuration = currentOption.duration * lastPlaybackSpeed;
-        double defaultStaticDuration =
-            currentOption.staticDuration * lastPlaybackSpeed;
-        DanmakuOption updatedOption = currentOption.copyWith(
-          duration: defaultDuration / speed,
-          staticDuration: defaultStaticDuration / speed,
-        );
-        danmakuController!.updateOption(updatedOption);
-      } catch (_) {}
-    }
+    _updateDanmakuSpeedPolicy();
   }
 
   // 还原默认速度
   double playSpeedDefault = Pref.playSpeedDefault;
   Future<void> setDefaultSpeed() async {
-    await _videoPlayerController?.setRate(playSpeedDefault);
-    _playbackSpeed.value = playSpeedDefault;
+    await setPlaybackSpeed(playSpeedDefault);
   }
 
   /// 播放视频
