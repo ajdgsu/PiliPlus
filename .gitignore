@@ -153,3 +153,6 @@ test*
 
 .vscode/settings.json
 .codegraph/
+.gstack/
+/keydef_key.zip
+/PiliPlus_*.csv

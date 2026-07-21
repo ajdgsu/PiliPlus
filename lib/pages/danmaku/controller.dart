@@ -28,12 +28,14 @@ class PlDanmakuController {
   final Map<int, List<DanmakuElem>> _dmSegMap = HashMap();
   // 已请求的段落标记
   late final Set<int> _requestedSeg = HashSet();
+  final Set<int> _emptySeg = HashSet();
 
   static const int segmentLength = 60 * 6 * 1000;
 
   void dispose() {
     _dmSegMap.clear();
     _requestedSeg.clear();
+    _emptySeg.clear();
   }
 
   static int calcSegment(int progress) {
@@ -57,7 +59,12 @@ class PlDanmakuController {
       if (response.state == 1) {
         _plPlayerController.dmState.add(_cid);
       }
-      handleDanmaku(response.elems);
+      if (response.elems.isEmpty) {
+        _emptySeg.add(segmentIndex);
+      } else {
+        _emptySeg.remove(segmentIndex);
+        handleDanmaku(response.elems);
+      }
     } else {
       _requestedSeg.remove(segmentIndex);
     }
@@ -94,6 +101,9 @@ class PlDanmakuController {
       (_dmSegMap[pos] ??= []).add(element);
     }
   }
+
+  bool isCurrentSegmentKnownEmpty(int progress) =>
+      !_isFileSource && _emptySeg.contains(calcSegment(progress));
 
   List<DanmakuElem>? getCurrentDanmaku(int progress) {
     if (_isFileSource) {

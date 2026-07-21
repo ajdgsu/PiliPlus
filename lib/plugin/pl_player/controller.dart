@@ -729,6 +729,7 @@ class PlPlayerController with BlockConfigMixin {
 
   Future<Player> _initPlayer() async {
     assert(_videoPlayerController == null);
+    final miSrEnabled = Platform.isAndroid && Pref.enableMiSr;
     final opt = {
       'video-sync': Pref.videoSync,
       if (Platform.isAndroid) 'ao': Pref.audioOutput,
@@ -736,6 +737,7 @@ class PlPlayerController with BlockConfigMixin {
           (PlatformUtils.isMobile ? Pref.playerVolume : volume.value * 100)
               .toString(),
       'volume-max': kMaxVolume.toString(),
+      if (miSrEnabled) 'vd-lavc-o': 'mi_sr=1',
     };
     final autosync = Pref.autosync;
     if (autosync != '0') {

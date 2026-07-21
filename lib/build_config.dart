@@ -9,6 +9,10 @@ abstract final class BuildConfig {
   );
 
   static const int buildTime = int.fromEnvironment('pili.time');
+
+  static const bool emptyDanmakuGuard = bool.fromEnvironment(
+    'PILIPLUS_EMPTY_DANMAKU_GUARD',
+  );
   static const String commitHash = String.fromEnvironment(
     'pili.hash',
     defaultValue: 'N/A',

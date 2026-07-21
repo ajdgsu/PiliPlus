@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:PiliPlus/build_config.dart';
 import 'package:PiliPlus/grpc/bilibili/community/service/dm/v1.pb.dart';
 import 'package:PiliPlus/pages/danmaku/controller.dart';
 import 'package:PiliPlus/pages/danmaku/danmaku_model.dart';
@@ -114,6 +115,11 @@ class _PlDanmakuState extends State<PlDanmaku> {
     }
     latestAddedPosition = currentPosition;
 
+    if (BuildConfig.emptyDanmakuGuard &&
+        _plDanmakuController.isCurrentSegmentKnownEmpty(currentPosition)) {
+      return;
+    }
+
     List<DanmakuElem>? currentDanmakuList = _plDanmakuController
         .getCurrentDanmaku(currentPosition);
     if (currentDanmakuList != null) {
@@ -174,8 +180,7 @@ class _PlDanmakuState extends State<PlDanmaku> {
   @override
   Widget build(BuildContext context) {
     final positionScale = DiagonalRenderScope.danmakuPositionScaleOf(context);
-    final verticalOffset =
-        DiagonalRenderScope.danmakuVerticalOffsetOf(context);
+    final verticalOffset = DiagonalRenderScope.danmakuVerticalOffsetOf(context);
     final renderSize = Size(
       widget.size.width * positionScale,
       widget.size.height * positionScale,

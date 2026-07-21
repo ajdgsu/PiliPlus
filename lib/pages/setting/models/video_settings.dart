@@ -31,6 +31,14 @@ List<SettingsModel> get videoSettings => [
     setKey: SettingBoxKey.enableHA,
     defaultVal: true,
   ),
+  if (Platform.isAndroid)
+    const SwitchModel(
+      title: '小米硬件超分',
+      subtitle: '仅小米设备及支持的视频有效，可能因分辨率、帧率或硬件策略自动跳过',
+      leading: Icon(Icons.auto_awesome_outlined),
+      setKey: SettingBoxKey.enableMiSr,
+      needReboot: true,
+    ),
   const SwitchModel(
     title: '免登录1080P',
     subtitle: '免登录查看1080P视频',
