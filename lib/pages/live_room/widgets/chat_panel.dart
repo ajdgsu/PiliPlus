@@ -1,6 +1,8 @@
 import 'package:PiliPlus/common/widgets/flutter/popup_menu.dart';
 import 'package:PiliPlus/common/widgets/gesture/tap_gesture_recognizer.dart';
 import 'package:PiliPlus/common/widgets/image/network_img_layer.dart';
+import 'package:PiliPlus/common/widgets/scroll_physics.dart'
+    show platformClampingPhysics;
 import 'package:PiliPlus/http/live.dart';
 import 'package:PiliPlus/models_new/live/live_danmaku/danmaku_msg.dart';
 import 'package:PiliPlus/models_new/live/live_superchat/item.dart';
@@ -11,9 +13,9 @@ import 'package:PiliPlus/pages/video/widgets/header_control.dart';
 import 'package:PiliPlus/utils/extension/theme_ext.dart';
 import 'package:PiliPlus/utils/utils.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
-import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
+import 'package:material_ui/material_ui.dart';
 
 class LiveRoomChatPanel extends StatelessWidget {
   const LiveRoomChatPanel({
@@ -54,7 +56,7 @@ class LiveRoomChatPanel extends StatelessWidget {
             separatorBuilder: (_, _) => const SizedBox(height: 8),
             itemCount: liveRoomController.builtLength =
                 liveRoomController.messages.length,
-            physics: const ClampingScrollPhysics(),
+            physics: platformClampingPhysics,
             itemBuilder: (_, index) {
               final item = liveRoomController.messages[index];
               if (item is DanmakuMsg) {

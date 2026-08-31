@@ -1,5 +1,5 @@
 import 'package:PiliPlus/utils/extension/num_ext.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class SliderDialog extends StatefulWidget {
   const SliderDialog({
@@ -49,14 +49,15 @@ class _SliderDialogState extends State<SliderDialog> {
 
   void _setInput(String text) {
     final value = double.tryParse(text);
-    final valid = value != null &&
+    final valid =
+        value != null &&
         value.isFinite &&
         value >= widget.min &&
         value <= widget.max;
     setState(() {
       _inputError = valid ? null : '请输入 ${widget.min}~${widget.max} 范围内的数字';
       if (valid) {
-        _tempValue = value!.toPrecision(widget.precise);
+        _tempValue = value.toPrecision(widget.precise);
       }
     });
   }
@@ -80,8 +81,9 @@ class _SliderDialogState extends State<SliderDialog> {
               onChanged: (double value) {
                 setState(() {
                   _tempValue = value.toPrecision(widget.precise);
-                  _inputController.text =
-                      _tempValue.toStringAsFixed(widget.precise);
+                  _inputController.text = _tempValue.toStringAsFixed(
+                    widget.precise,
+                  );
                   _inputError = null;
                 });
               },

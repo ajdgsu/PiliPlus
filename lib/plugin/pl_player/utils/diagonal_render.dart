@@ -2,13 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show ValueNotifier;
 import 'package:flutter/widgets.dart'
-    show
-        BoxFit,
-        BuildContext,
-        InheritedWidget,
-        Offset,
-        Size,
-        WidgetsBinding;
+    show BoxFit, BuildContext, InheritedWidget, Offset, Size, WidgetsBinding;
 
 double diagonalDanmakuAlignmentY(double normalizedOffset) =>
     1.0 - normalizedOffset.clamp(0.0, 1.0).toDouble() * 2.0;
