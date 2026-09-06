@@ -98,7 +98,7 @@ class PlDanmakuController {
   }
 
   bool isCurrentSegmentKnownEmpty(int progress) =>
-      !_isFileSource && _emptySeg.contains(calcSegment(progress));
+      !_isFileSource && _emptySeg.contains(DmUtils.calcSegment(progress));
 
   List<DanmakuElem>? getCurrentDanmaku(int progress) {
     if (_isFileSource) {
