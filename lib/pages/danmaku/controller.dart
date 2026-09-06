@@ -7,6 +7,7 @@ import 'package:PiliPlus/http/loading_state.dart';
 import 'package:PiliPlus/plugin/pl_player/controller.dart';
 import 'package:PiliPlus/plugin/pl_player/models/data_source.dart';
 import 'package:PiliPlus/utils/accounts.dart';
+import 'package:PiliPlus/utils/danmaku_utils.dart';
 import 'package:PiliPlus/utils/path_utils.dart';
 import 'package:PiliPlus/utils/utils.dart';
 import 'package:path/path.dart' as path;
@@ -30,16 +31,10 @@ class PlDanmakuController {
   late final Set<int> _requestedSeg = HashSet();
   final Set<int> _emptySeg = HashSet();
 
-  static const int segmentLength = 60 * 6 * 1000;
-
   void dispose() {
     _dmSegMap.clear();
     _requestedSeg.clear();
     _emptySeg.clear();
-  }
-
-  static int calcSegment(int progress) {
-    return progress ~/ segmentLength;
   }
 
   Future<void> queryDanmaku(int segmentIndex) async {
@@ -109,7 +104,7 @@ class PlDanmakuController {
     if (_isFileSource) {
       initFileDmIfNeeded();
     } else {
-      final int segmentIndex = calcSegment(progress);
+      final int segmentIndex = DmUtils.calcSegment(progress);
       if (!_requestedSeg.contains(segmentIndex)) {
         queryDanmaku(segmentIndex);
         return null;
