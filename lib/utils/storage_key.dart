@@ -162,7 +162,8 @@ abstract final class SettingBoxKey {
       diagonalRenderScale = 'diagonalRenderScale',
       diagonalDanmakuVerticalOffset = 'diagonalDanmakuVerticalOffset',
       liveStream = 'liveStream',
-      enableDocProvider = 'enableDocProvider';
+      enableDocProvider = 'enableDocProvider',
+      enableEmoteTooltip = 'enableEmoteTooltip';
 
   static const String minimizeOnExit = 'minimizeOnExit',
       windowSize = 'windowSize',
