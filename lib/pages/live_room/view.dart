@@ -1092,7 +1092,10 @@ class _LiveDanmakuState extends State<LiveDanmaku> {
       widget.size.width * positionScale,
       widget.size.height * positionScale,
     );
-    final option = DanmakuOptions.get(notFullscreen: widget.notFullscreen);
+    final option = DanmakuOptions.get(
+      notFullscreen: widget.notFullscreen,
+      speed: plPlayerController.playbackSpeed,
+    );
     return SizedBox.expand(
       child: OverflowBox(
         alignment: Alignment.center,

@@ -736,7 +736,7 @@ class PlPlayerController with BlockConfigMixin, AudioNormalizationMixin {
     if (autosync != '0') {
       opt['autosync'] = autosync;
     }
-    final audioDelay = int.parse(Pref.audioDelay);
+    final audioDelay = int.tryParse(Pref.audioDelay) ?? 0;
     if (audioDelay != 0) {
       opt['audio-delay'] = (audioDelay / 1000).toStringAsFixed(3);
     }

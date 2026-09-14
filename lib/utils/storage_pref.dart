@@ -277,7 +277,7 @@ abstract final class Pref {
   );
 
   static String get audioDelay =>
-      _setting.get(SettingBoxKey.audioDelay, defaultValue: '0');
+      _setting.get(SettingBoxKey.audioDelay, defaultValue: '0').toString();
 
   static CDNService get defaultCDNService {
     if (_setting.get(SettingBoxKey.CDNService) case final String cdnName) {
