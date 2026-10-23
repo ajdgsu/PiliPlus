@@ -23,12 +23,18 @@ void main() {
     tempDir = await Directory.systemTemp.createTemp('piliplus-account-test-');
     Hive.init(tempDir.path);
     GStorage.regAdapter();
+    GStorage.setting = await Hive.openBox('setting');
+    GStorage.video = await Hive.openBox('video');
+    GStorage.localCache = await Hive.openBox('localCache');
     Accounts.account = await Hive.openBox<LoginAccount>('account');
   });
 
   setUp(() => Accounts.account.clear());
 
   tearDownAll(() async {
+    await GStorage.setting.close();
+    await GStorage.video.close();
+    await GStorage.localCache.close();
     await Hive.close();
     await tempDir.delete(recursive: true);
   });
