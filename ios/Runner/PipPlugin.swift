@@ -259,7 +259,7 @@ private final class PipSession: NSObject {
       let isBuffering = args["isBuffering"] as? Bool ?? false
       CMTimebaseSetRateAndAnchorTime(
         timebase,
-        rate: isPlaying && !isBuffering ? speed : 0,
+        rate: Float(isPlaying && !isBuffering ? speed : 0),
         anchorTime: CMTime(value: position, timescale: 1000),
         immediateSourceTime: CMClockGetTime(CMClockGetHostTimeClock())
       )
@@ -534,7 +534,7 @@ extension PipSession: AVPictureInPictureSampleBufferPlaybackDelegate {
     setPlaying playing: Bool
   ) {
     isPlaying = playing
-    CMTimebaseSetRate(timebase, rate: playing ? speed : 0)
+    CMTimebaseSetRate(timebase, rate: Float(playing ? speed : 0))
     pictureInPictureController.invalidatePlaybackState()
     sendEvent("setPlaying", playing)
   }
